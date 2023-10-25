@@ -159,7 +159,7 @@ Check this to end the application if necessary...
 bool OGLRenderer::HasInitialised() const{
 	return init;
 }
-
+ 
 /*
 Resizes the rendering area. Should only be called by the Window class!
 Does lower bounds checking on input values, so should be reasonably safe

@@ -374,7 +374,9 @@ Mesh* Mesh::LoadFromMeshFile(const string& name) {
 
 	return mesh;
 }
-
+/*
+S.E.Degirmenci2: Create mesh to use in assignment 1.
+*/
 Mesh* Mesh::GenerateTriangle() {
 	Mesh* m = new Mesh();
 	m->numVertices = 3;
