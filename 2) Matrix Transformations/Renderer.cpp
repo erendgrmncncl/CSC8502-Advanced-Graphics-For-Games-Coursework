@@ -1,6 +1,8 @@
 #include "Renderer.h"
+#include "../nclgl/Camera.h"
 
 Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
+	_camera = new Camera();
 	triangle = Mesh::GenerateTriangle();
 	matrixShader = new Shader("matrixVertex.glsl", "colourFragment.glsl");
 	if (!matrixShader->LoadSuccess())
@@ -45,4 +47,9 @@ void Renderer::RenderScene() {
 			1, false, modelMatrix.values);
 		triangle->Draw();
 	}
+}
+
+void Renderer::UpdateScene(float dt) {
+	_camera->updateCamera(dt);
+	viewMatrix = _camera->buildViewMatrix();
 }

@@ -50,6 +50,7 @@ int main() {
 		renderer.SetScale(scale);
 		renderer.SetPosition(position);
 		renderer.SetFOV(fov);
+		renderer.UpdateScene(w.GetTimer()->GetTimeDeltaSeconds());
 		renderer.RenderScene();
 		renderer.SwapBuffers();
 	}
