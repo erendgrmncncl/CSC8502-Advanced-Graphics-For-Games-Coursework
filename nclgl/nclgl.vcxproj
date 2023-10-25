@@ -20,6 +20,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\Third Party\glad\glad.c" />
+    <ClCompile Include="Camera.cpp" />
     <ClCompile Include="ComputeShader.cpp" />
     <ClCompile Include="GameTimer.cpp" />
     <ClCompile Include="Keyboard.cpp" />
