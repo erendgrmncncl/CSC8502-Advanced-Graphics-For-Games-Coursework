@@ -217,6 +217,17 @@ void OGLRenderer::BindShader(Shader*s) {
 	glUseProgram(s->GetProgram());
 }
 
+void OGLRenderer::SetTextureRepeating(GLuint target, bool isRepeating)
+{
+	glBindTexture(GL_TEXTURE_2D, target);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S,
+		isRepeating ? GL_REPEAT : GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, 
+		isRepeating ? GL_REPEAT : GL_CLAMP_TO_EDGE);
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+}
+
 #ifdef OPENGL_DEBUGGING
 void OGLRenderer::DebugCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const void* userParam)	{
 		string sourceName;
