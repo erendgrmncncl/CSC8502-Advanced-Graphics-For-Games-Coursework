@@ -20,7 +20,9 @@ public:
 	inline void SetRotation(float r) { _rotation = r; }
 	inline void SetPosition(Vector3 p) { position = p; }
 	inline void SetFOV(float fov) { _fov = fov; }
+	inline void SetBlendRatio(float blendRatio) { _blendRatio = blendRatio; }
 
+	inline float GetBlendRatio() { return _blendRatio; }
 	inline float GetFOV() { return _fov; }
 
 protected:
@@ -30,6 +32,7 @@ protected:
 	float _scale;
 	float _rotation;
 	float _fov;
+	float _blendRatio;
 
 	Vector3 position;
 

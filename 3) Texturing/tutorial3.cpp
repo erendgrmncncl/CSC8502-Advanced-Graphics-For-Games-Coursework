@@ -31,6 +31,13 @@ int main() {
 		if(Window::GetKeyboard()->KeyTriggered(KEYBOARD_2) ) {
 			renderer.ToggleRepeating();
 		}
+		if (Window::GetKeyboard()->KeyTriggered(KEYBOARD_UP) && renderer.GetBlendRatio() <= 1.f){
+			renderer.SetBlendRatio(renderer.GetBlendRatio() + .1f);
+		}
+		if (Window::GetKeyboard()->KeyTriggered(KEYBOARD_DOWN) && renderer.GetBlendRatio() > 0.f)
+		{
+			renderer.SetBlendRatio(renderer.GetBlendRatio() - .1f);
+		}
 
 		renderer.RenderScene();
 		renderer.SwapBuffers();

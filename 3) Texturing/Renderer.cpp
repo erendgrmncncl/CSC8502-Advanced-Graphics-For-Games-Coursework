@@ -17,6 +17,7 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 		return;
 	_isRepeating = true;
 	_isFiltering = true;
+	_blendRatio = 0.1f;
 
 	init = true;
 }
@@ -71,6 +72,8 @@ void Renderer::RenderScene() {
 		"diffuseTex"), 0);
 	glUniform1i(glGetUniformLocation(_shader->GetProgram(),
 		"secondTex"), 1);
+	glUniform1f(glGetUniformLocation(_shader->GetProgram(),
+		"blendRatio"), _blendRatio);
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, _texture);
 	glActiveTexture(GL_TEXTURE1);
