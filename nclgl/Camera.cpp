@@ -13,6 +13,10 @@ Camera::Camera(float pitch, float yaw, Vector3 position) {
 	_position = position;
 }
 
+Camera::~Camera() {
+
+}
+
 Matrix4 Camera::buildViewMatrix() {
 	return Matrix4::Rotation(-_pitch, Vector3(1, 0, 0)) *
 		Matrix4::Rotation(-_yaw, Vector3(0, 1, 0)) *
