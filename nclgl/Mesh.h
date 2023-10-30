@@ -55,6 +55,7 @@ public:
 	static Mesh* LoadFromMeshFile(const std::string& name);
 	static Mesh* GenerateTriangle();
 	static Mesh* GenerateTriangleWithTexture();
+	static Mesh* GenerateQuad();
 	unsigned int GetTriCount() const {
 		int primCount = indices ? numIndices : numVertices;
 		return primCount / 3;

@@ -54,5 +54,4 @@ void Camera::updateCamera(float dt) {
 		_position.y += speed;
 	if (keyboard->KeyDown(KEYBOARD_SPACE))
 		_position.y -= speed;
-
 }
