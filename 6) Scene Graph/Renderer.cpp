@@ -13,8 +13,20 @@ Renderer::Renderer(Window &parent) : OGLRenderer(parent) {
 	_camera->setPosition(Vector3(0, 30, 175));
 
 	_root = new SceneNode();
-	_root->addChild(new CubeRobot(_cube));
+	for (int i = 0; i < 10; i++)
+	{
+		auto* robot = new CubeRobot(_cube);
+		auto transform = robot->getTransform().GetPositionVector();
+		if (i == 2) {
+			robot->setScale(10);
+		}
 
+		robot->setTransform(
+			Matrix4::Translation(Vector3(transform.x + (i*50), transform.y, transform.z)));
+
+		_root->addChild(robot);
+	}
+	
 	glEnable(GL_DEPTH_TEST);
 	init = true;
 }
@@ -23,7 +35,6 @@ Renderer::~Renderer() {
 	delete _root;
 	delete _shader;
 	delete _camera;
-	delete _cube;
 }
 
 void Renderer::UpdateScene(float dt) {

@@ -41,6 +41,14 @@ void SceneNode::setModelScale(Vector3 modelScale){
     _modelScale = modelScale;
 }
 
+void SceneNode::setScale(float scale){
+    Vector3 newScale = Vector3(_modelScale.x * scale, _modelScale.y * scale, _modelScale.z * scale);
+    setModelScale(newScale);
+    for (SceneNode* child : _children) {
+        child->setScale(scale);
+    }
+}
+
 Mesh* SceneNode::getMesh() const{
     return _mesh;
 }

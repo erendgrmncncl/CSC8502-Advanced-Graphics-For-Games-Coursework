@@ -20,6 +20,7 @@ public:
 	
 	Vector3 getModelScale() const;
 	void setModelScale(Vector3 modelScale);
+	void setScale(float scale);
 
 	Mesh* getMesh() const;
 	void setMesh(Mesh* mesh);

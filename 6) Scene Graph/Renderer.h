@@ -4,6 +4,7 @@
 #include "../nclgl/Camera.h"
 #include "SceneNode.h"
 #include "CubeRobot.h"
+#include <vector>
 
 class Renderer : public OGLRenderer {
 public:
