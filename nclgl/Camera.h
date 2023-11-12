@@ -21,4 +21,5 @@ protected:
 	Vector3 _position;
 	float _yaw;
 	float _pitch;
+	float _speed;
 };

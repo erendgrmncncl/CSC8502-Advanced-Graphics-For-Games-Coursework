@@ -2,15 +2,21 @@
 #include "Window.h"
 #include <algorithm>
 
+namespace {
+	constexpr const int SPEED_INIT_VAL = 40.f;
+}
+
 Camera::Camera() {
 	_yaw = .0f;
 	_pitch = .0f;
+	_speed = SPEED_INIT_VAL;
 }
 
 Camera::Camera(float pitch, float yaw, Vector3 position) {
 	_yaw = yaw;
 	_pitch = pitch;
 	_position = position;
+	_speed = SPEED_INIT_VAL;
 }
 
 Camera::~Camera() {
@@ -44,18 +50,26 @@ void Camera::updateCamera(float dt) {
 	Vector3 forward = rotation * Vector3(0, 0, 1);
 	Vector3 right = rotation * Vector3(1, 0, 0);
 
-	float speed = 30.0f * dt;
+	float currentSpeed = _speed * dt;
 	auto* keyboard = Window::GetKeyboard();
 	if (keyboard->KeyDown(KEYBOARD_W))
-		_position -= forward * speed;
+		_position -= forward * currentSpeed;
 	if (keyboard->KeyDown(KEYBOARD_S))
-		_position += forward * speed;
+		_position += forward * currentSpeed;
 	if (keyboard->KeyDown(KEYBOARD_A))
-		_position -= right * speed;
+		_position -= right * currentSpeed;
 	if (keyboard->KeyDown(KEYBOARD_D))
-		_position += right * speed;
-	if(keyboard->KeyDown(KEYBOARD_SHIFT))
-		_position.y += speed;
+		_position += right * currentSpeed;
+	if(keyboard->KeyDown(KEYBOARD_CONTROL))
+		_position.y -= currentSpeed;
 	if (keyboard->KeyDown(KEYBOARD_SPACE))
-		_position.y -= speed;
+		_position.y += currentSpeed;
+	if (keyboard->KeyDown(KEYBOARD_SHIFT))
+		_speed += 2.f;
+	if (keyboard->KeyDown(KEYBOARD_C)) {
+		if (_speed -= 2.f > 0.f) {
+			_speed -= 2.f;
+		}
+
+	}
 }

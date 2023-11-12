@@ -53,15 +53,17 @@ public:
 
 	virtual void	RenderScene()		= 0;
 	virtual void	UpdateScene(float msec);
+	void			BindShader(Shader* s);
+	void			UpdateShaderMatrices();
 	void			SwapBuffers();
 
 	bool			HasInitialised() const;	
 	
 protected:
-	virtual void	Resize(int x, int y);	
-	void			UpdateShaderMatrices();
-	void			BindShader(Shader*s);
+	virtual void	Resize(int x, int y);
 	void SetTextureRepeating(GLuint target, bool isRepeating);
+	void SetShaderLight(const Light& light);
+	void SetShaderForMultipleLights(const std::vector<Light*>& lights);
 
 	void StartDebugGroup(const std::string& s) {
 		glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 0, (GLsizei)s.length(), s.c_str());
@@ -76,6 +78,8 @@ protected:
 	Matrix4 viewMatrix;		//View matrix
 	Matrix4 textureMatrix;	//Texture matrix
 	Matrix4 shadowMatrix;
+
+	GLuint LoadCubeMap(const std::vector<std::string>& inFacePaths);
 
 	int		width;			//Render area width (not quite the same as window width)
 	int		height;			//Render area height (not quite the same as window height)

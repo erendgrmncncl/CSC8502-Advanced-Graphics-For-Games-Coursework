@@ -14,6 +14,7 @@ _-_-_-_-_-_-_-""  ""
 */
 #include "OGLRenderer.h"
 #include "Shader.h"
+#include "Light.h"
 #include <algorithm>
 
 using std::string;
@@ -112,7 +113,7 @@ OGLRenderer::OGLRenderer(Window &window)	{
 #ifdef OPENGL_DEBUGGING 
 		| WGL_CONTEXT_DEBUG_BIT_ARB
 #endif		//No deprecated stuff!! DIE DIE DIE glBegin!!!!
-		,WGL_CONTEXT_PROFILE_MASK_ARB, WGL_CONTEXT_CORE_PROFILE_BIT_ARB,		//We want everything OpenGL 3.2 provides...
+		,WGL_CONTEXT_PROFILE_MASK_ARB, WGL_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB,		//We want everything OpenGL 3.2 provides...
 		0					//That's enough attributes...
     };
 
@@ -228,7 +229,52 @@ void OGLRenderer::SetTextureRepeating(GLuint target, bool isRepeating)
 
 }
 
+void OGLRenderer::SetShaderLight(const Light& light){
+	glUniform3fv(glGetUniformLocation(currentShader->GetProgram(), "lightPos"), 1, (float*)&light.getPosition());
+	glUniform4fv(glGetUniformLocation(currentShader->GetProgram(), "lightColour"), 1, (float*)&light.getColour());
+	glUniform4fv(glGetUniformLocation(currentShader->GetProgram(), "specularityColour"), 1, (float*)&light.getSpeculariyColour());
+	glUniform1f(glGetUniformLocation(currentShader->GetProgram(),
+		"lightRadius"), light.getRadius());
+}
+
+void OGLRenderer::SetShaderForMultipleLights(const std::vector<Light*>& lights){
+	int lightSize = lights.size();
+}
+
 #ifdef OPENGL_DEBUGGING
+GLuint OGLRenderer::LoadCubeMap(const std::vector<std::string>& inFacePaths) {
+	GLuint textureID;
+	glGenTextures(1, &textureID);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
+
+	int width, height, nrChannels;
+
+	int index = 0;
+	for (auto& facePath : inFacePaths) {
+		unsigned char* data = SOIL_load_image(facePath.c_str(), &width, &height, &nrChannels, 0);
+		if (data)
+		{
+			glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + index,
+				0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data
+			);
+			SOIL_free_image_data(data);
+		}
+		else
+		{
+			std::cout << "Cubemap tex failed to load at path: " << facePath << std::endl;
+			SOIL_free_image_data(data);
+		}
+		index++;
+	}
+
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+	return textureID;
+}
+
 void OGLRenderer::DebugCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const void* userParam)	{
 		string sourceName;
 		string typeName;

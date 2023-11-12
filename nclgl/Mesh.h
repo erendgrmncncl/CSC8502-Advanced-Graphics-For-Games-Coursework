@@ -2,17 +2,17 @@
 Class:Mesh
 Implements:
 Author:Rich Davison	 <richard-gordon.davison@newcastle.ac.uk>
-Description:Wrapper around OpenGL primitives, geometry and related 
+Description:Wrapper around OpenGL primitives, geometry and related
 OGL functions.
 
 There's a couple of extra functions in here that you didn't get in the tutorial
-series, to draw debug normals and tangents. 
+series, to draw debug normals and tangents.
 
 
--_-_-_-_-_-_-_,------,   
+-_-_-_-_-_-_-_,------,
 _-_-_-_-_-_-_-|   /\_/\   NYANYANYAN
 -_-_-_-_-_-_-~|__( ^ .^) /
-_-_-_-_-_-_-_-""  ""   
+_-_-_-_-_-_-_-""  ""
 
 *//////////////////////////////////////////////////////////////////////////////
 
@@ -25,22 +25,22 @@ _-_-_-_-_-_-_-""  ""
 //A handy enumerator, to determine which member of the bufferObject array
 //holds which data
 enum MeshBuffer {
-	VERTEX_BUFFER	,
-	COLOUR_BUFFER	, 
-	TEXTURE_BUFFER	,
-	NORMAL_BUFFER	, 
-	TANGENT_BUFFER	,
+	VERTEX_BUFFER,
+	COLOUR_BUFFER,
+	TEXTURE_BUFFER,
+	NORMAL_BUFFER,
+	TANGENT_BUFFER,
 
 	WEIGHTVALUE_BUFFER,		//new this year, weight values of vertices
 	WEIGHTINDEX_BUFFER,	//new this year, indices of weights
 
-	INDEX_BUFFER	,
+	INDEX_BUFFER,
 
 	MAX_BUFFER
 };
 
-class Mesh	{
-public:	
+class Mesh {
+public:
 	struct SubMesh {
 		int start;
 		int count;
@@ -65,6 +65,8 @@ public:
 		return (unsigned int)jointNames.size();
 	}
 
+	void GenerateNormals();
+	bool GetVertexIndicesForTri(unsigned int i, unsigned int& a, unsigned int& b, unsigned int& c) const;
 
 	int GetIndexForJoint(const std::string& name) const;
 	int GetParentForJoint(const std::string& name) const;
@@ -79,7 +81,7 @@ public:
 	}
 
 	int		GetSubMeshCount() const {
-		return (int)meshLayers.size(); 
+		return (int)meshLayers.size();
 	}
 
 	bool GetSubMesh(int i, const SubMesh* s) const;
@@ -88,25 +90,28 @@ public:
 protected:
 	void	BufferData();
 
+	void GenerateTangents();
+	Vector4 GenerateTangent(int a, int b, int c);
+
 	GLuint	arrayObject;
 
 	GLuint	bufferObject[MAX_BUFFER];
 
 	GLuint	numVertices;
 	GLuint	numIndices;
-	
+
 	GLuint	type;
 
-	Vector3*		vertices;
-	Vector4*		colours;
-	Vector2*		textureCoords;
-	Vector3*		normals;
-	Vector4*		tangents;
+	Vector3* vertices;
+	Vector4* colours;
+	Vector2* textureCoords;
+	Vector3* normals;
+	Vector4* tangents;
 
-	Vector4*		weights;
-	int*			weightIndices;
+	Vector4* weights;
+	int* weightIndices;
 
-	unsigned int*	indices;
+	unsigned int* indices;
 
 	Matrix4* bindPose;
 	Matrix4* inverseBindPose;

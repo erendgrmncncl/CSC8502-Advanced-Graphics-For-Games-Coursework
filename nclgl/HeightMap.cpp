@@ -44,7 +44,11 @@ HeightMap::HeightMap(const std::string& name) {
             indices[i++] = d;
         }
     }
+
+    GenerateNormals();
+    GenerateTangents();
     BufferData();
+
     _heightMapSize.x = vertexScale.x * (iWidth - 1);
     _heightMapSize.y = vertexScale.y * 255.f;
     _heightMapSize.z = vertexScale.z * (iHeight - 1);
