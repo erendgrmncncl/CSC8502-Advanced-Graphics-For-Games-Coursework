@@ -58,6 +58,19 @@ public:
 	void			SwapBuffers();
 
 	bool			HasInitialised() const;	
+
+	Matrix4& getModelMatrix();
+	void setModelMatrix(Matrix4& modelMatrix);
+
+	Matrix4& getProjMatrix();
+	void setProjMatrix(Matrix4& projMatrix);
+
+	Matrix4& getViewMatrix();
+	void setViewMatrix(Matrix4& viewMatrix);
+
+	Matrix4& getTextureMatrix();
+	void setTextureMatrix(Matrix4& textureMatrix);
+
 	
 protected:
 	virtual void	Resize(int x, int y);

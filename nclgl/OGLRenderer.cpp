@@ -241,6 +241,39 @@ void OGLRenderer::SetShaderForMultipleLights(const std::vector<Light*>& lights){
 	int lightSize = lights.size();
 }
 
+Matrix4& OGLRenderer::getModelMatrix(){
+	return modelMatrix;
+}
+
+void OGLRenderer::setModelMatrix(Matrix4& modelMatrix){
+	this->modelMatrix = modelMatrix;
+}
+
+Matrix4& OGLRenderer::getProjMatrix(){
+	return modelMatrix;
+}
+
+void OGLRenderer::setProjMatrix(Matrix4& projMatrix){
+	this->projMatrix = projMatrix;
+}
+
+Matrix4& OGLRenderer::getViewMatrix(){
+	return viewMatrix;
+}
+
+void OGLRenderer::setViewMatrix(Matrix4& viewMatrix){
+	this->viewMatrix = viewMatrix;
+}
+
+Matrix4& OGLRenderer::getTextureMatrix(){
+	return textureMatrix;
+
+}
+
+void OGLRenderer::setTextureMatrix(Matrix4& textureMatrix){
+	this->textureMatrix = textureMatrix;
+}
+
 #ifdef OPENGL_DEBUGGING
 GLuint OGLRenderer::LoadCubeMap(const std::vector<std::string>& inFacePaths) {
 	GLuint textureID;
