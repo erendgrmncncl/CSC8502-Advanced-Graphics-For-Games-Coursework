@@ -1,10 +1,14 @@
 #include "SpaceObject.h"
 
-SpaceObject::SpaceObject(Mesh* mesh, GLuint texture, Shader* shader): SceneNode(mesh){
+SpaceObjectParams::SpaceObjectParams(Vector3 transform, Vector3 scale) {
+	_transform = transform;
+	_scale = scale;
+}
+
+SpaceObject::SpaceObject(Mesh* mesh, GLuint texture, Shader* shader, SpaceObjectParams params) : SceneNode(mesh) {
 	_texture = texture;
-	setModelScale(Vector3(150, 150, 150));
-	setTransform(Matrix4::Translation(Vector3(0, 35, 0)));
-	setBoundingRadius(150.f);
-	if (shader != nullptr);
-		setShader(shader);
+	_shader = shader;
+	setModelScale(params._scale);
+	setTransform(Matrix4::Translation(params._transform));
+	setBoundingRadius(20.f);
 }
