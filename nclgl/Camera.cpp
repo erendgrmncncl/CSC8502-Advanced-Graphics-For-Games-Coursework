@@ -52,18 +52,26 @@ void Camera::updateCamera(float dt) {
 
 	float currentSpeed = _speed * dt;
 	auto* keyboard = Window::GetKeyboard();
-	if (keyboard->KeyDown(KEYBOARD_W))
+	if (keyboard->KeyTriggered(KEYBOARD_T))
+		isMovingAutomatically = !isMovingAutomatically;
+	if (!isMovingAutomatically) {
+		if (keyboard->KeyDown(KEYBOARD_W))
+			_position -= forward * currentSpeed;
+		if (keyboard->KeyDown(KEYBOARD_S))
+			_position += forward * currentSpeed;
+		if (keyboard->KeyDown(KEYBOARD_A))
+			_position -= right * currentSpeed;
+		if (keyboard->KeyDown(KEYBOARD_D))
+			_position += right * currentSpeed;
+		if (keyboard->KeyDown(KEYBOARD_CONTROL))
+			_position.y -= currentSpeed;
+		if (keyboard->KeyDown(KEYBOARD_SPACE))
+			_position.y += currentSpeed;
+	}
+	else{
 		_position -= forward * currentSpeed;
-	if (keyboard->KeyDown(KEYBOARD_S))
-		_position += forward * currentSpeed;
-	if (keyboard->KeyDown(KEYBOARD_A))
-		_position -= right * currentSpeed;
-	if (keyboard->KeyDown(KEYBOARD_D))
-		_position += right * currentSpeed;
-	if(keyboard->KeyDown(KEYBOARD_CONTROL))
-		_position.y -= currentSpeed;
-	if (keyboard->KeyDown(KEYBOARD_SPACE))
-		_position.y += currentSpeed;
+	}
+	
 	if (keyboard->KeyDown(KEYBOARD_SHIFT))
 		_speed += 2.f;
 	if (keyboard->KeyDown(KEYBOARD_C)) {
@@ -72,4 +80,8 @@ void Camera::updateCamera(float dt) {
 		}
 
 	}
+}
+
+void Camera::MoveAutomatically(float dt){
+	
 }

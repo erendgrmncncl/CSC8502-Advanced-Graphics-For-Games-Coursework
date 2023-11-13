@@ -18,8 +18,11 @@ public:
 	inline void setPitch(float pitch) { _pitch = pitch; }
 	inline void setPosition(Vector3 position) { _position = position; }
 protected:
+	bool isMovingAutomatically = false;
 	Vector3 _position;
 	float _yaw;
 	float _pitch;
 	float _speed;
+
+	void MoveAutomatically(float dt);
 };
