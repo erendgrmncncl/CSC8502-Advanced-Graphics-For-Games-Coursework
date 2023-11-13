@@ -49,6 +49,7 @@ public:
 	static bool compareByCameraDistance(SceneNode* firstNode, SceneNode* secondNode);
 
 	void addChild(SceneNode* child);
+	void removeChild(SceneNode* child);
 
 	virtual void update(float dt);
 	virtual void draw(OGLRenderer& renderer);

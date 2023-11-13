@@ -123,6 +123,13 @@ void SceneNode::addChild(SceneNode* child) {
     child->_parent = this;
 }
 
+void SceneNode::removeChild(SceneNode* child){
+    for (int i = 0; i < _children.size(); i++){
+        if (_children[i] == child)
+            _children.erase(_children.begin() + i);
+    }
+}
+
 void SceneNode::update(float dt) {
     if (_parent)
         _worldTransform = _parent->_worldTransform * _transform;

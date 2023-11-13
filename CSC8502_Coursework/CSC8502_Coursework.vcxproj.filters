@@ -9,6 +9,7 @@
     <ClCompile Include="Renderer.cpp" />
     <ClCompile Include="SkyboxNode.cpp" />
     <ClCompile Include="SpaceObject.cpp" />
+    <ClCompile Include="HeightmapNode.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="SceneNode.h" />
@@ -17,6 +18,7 @@
     <ClInclude Include="Renderer.h" />
     <ClInclude Include="SkyboxNode.h" />
     <ClInclude Include="SpaceObject.h" />
+    <ClInclude Include="HeightmapNode.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Plane.h" />

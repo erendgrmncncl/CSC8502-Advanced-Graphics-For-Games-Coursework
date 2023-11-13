@@ -7,6 +7,7 @@ class Camera;
 class SceneNode;
 class Mesh;
 class Shader;
+class SkyboxNode;
 
 class Renderer : public OGLRenderer {
 public:
@@ -17,21 +18,22 @@ public:
 	void RenderScene() override;
 
 protected:
-	void buildNodeLists(SceneNode* nodeToBuild);
-	void sortNodeLists();
-	void drawNodes();
-	void clearNodeLists();
-	void drawNode(SceneNode* nodeToDraw);
-	void drawSkybox();
+	bool _sceneToggle = false;
 
-	SceneNode* _root;
+	Vector3 m_planetSceneCameraPos;
+	SceneNode* _globalRoot;
+	SceneNode* _spaceRoot;
+	SceneNode* _planetRoot;
+	SkyboxNode* _skyboxNode;
+	SceneNode* _currentSceneRoot;
+
 	Camera* _camera;
 
 	Mesh* _quad;
-	Mesh* _cube;
 	Mesh* _sphere;
 	GLuint _texture;
-	GLuint _skyboxCubeMap;
+	GLuint _cubeMap;
+	GLuint _planetCubemap;
 
 	Shader* _shader;
 	Shader* _skyboxShader;
@@ -41,4 +43,16 @@ protected:
 	
 	std::vector<SceneNode*> _transparentNodeList;
 	std::vector<SceneNode*> _nodeList;
+	
+	void buildNodeLists(SceneNode* nodeToBuild);
+	void sortNodeLists();
+	void drawNodes();
+	void clearNodeLists();
+	void drawNode(SceneNode* nodeToDraw);
+	void InitGlobalSceneNode();
+	void InitSpaceSceneNodes();
+	void InitPlanetSceneNodes();
+	void InitSkyboxNode();
+	void toggleScene();
+	void onChangeScene();
 };
