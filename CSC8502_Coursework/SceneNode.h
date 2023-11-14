@@ -52,7 +52,7 @@ public:
 	void removeChild(SceneNode* child);
 
 	virtual void update(float dt);
-	virtual void draw(OGLRenderer& renderer);
+	virtual void draw(OGLRenderer& renderer, bool isDrawingForShadows = false);
 
 	std::vector<SceneNode*>::const_iterator getChildIteratorStart();
 	std::vector<SceneNode*>::const_iterator getChildIteratorEnd();

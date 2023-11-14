@@ -1,26 +1,34 @@
 #include "HeightmapNode.h"
 #include "../nclgl/HeightMap.h"
+#include "../nclgl/Light.h"
+#include "../nclgl/Camera.h"
 
-HeightMapNode::HeightMapNode(Shader* _shader, const HeightMapNodeParameter& parameters) : SceneNode(){
+HeightMapNode::HeightMapNode(Shader* _shader, Camera* camera, const HeightMapNodeParameter& parameters) : SceneNode() {
 	setShader(_shader);
 	_heightmap = new HeightMap(parameters._heightMapNoisePath);
+	_texture = parameters._heightMapTexture;
+	_bumpTexture = parameters._bumpTexture;
 	_mesh = _heightmap;
-	_texture = SOIL_load_OGL_texture(parameters._heightMapTexPath.c_str(), SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
-	_bumpTexture = SOIL_load_OGL_texture(parameters._heightMapBumpTexPath.c_str(), SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
+	_camera = camera;
+	_waterTexture = parameters._waterTexture;
+	_waterShader = parameters._waterShader;
+	_currentCubeMap = parameters._currentCubeMap;
+	_waterMesh = parameters._waterMesh;
 }
 
-void HeightMapNode::setUpShader(OGLRenderer& renderer){
-	//renderer.BindShader(_lightShader);
-	//TODO(eren.degirmenci): bind light after draw
-	//SetShaderLight(*_light);
-	//glUniform1i(glGetUniformLocation(_lightShader->GetProgram(), "diffuseTex"), 0);
+void HeightMapNode::setUpShader(OGLRenderer& renderer) {
 	renderer.BindShader(_shader);
+	renderer.SetShaderLight(*_light);
+	glUniform1i(glGetUniformLocation(_shader->GetProgram(), "diffuseTex"), 0);
+
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, _texture);
 
-	//glUniform1i(glGetUniformLocation(_lightShader->GetProgram(), "bumpTex"), 1);
+	glUniform1i(glGetUniformLocation(_shader->GetProgram(), "bumpTex"), 1);
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, _bumpTexture);
+
+	glUniform3fv(glGetUniformLocation(_shader->GetProgram(), "cameraPos"), 1, (float*)&_camera->getPosition());
 
 	renderer.getModelMatrix().ToIdentity();
 	renderer.getTextureMatrix().ToIdentity();
@@ -33,16 +41,78 @@ Vector3 HeightMapNode::getHeightMapSize() const
 	return _heightmap->getHeightmapSize();
 }
 
-void HeightMapNode::draw(OGLRenderer& renderer){
+void HeightMapNode::setLight(Light* light) {
+	_light = light;
+}
+
+Light* HeightMapNode::getLight()
+{
+	return _light;
+}
+
+void HeightMapNode::draw(OGLRenderer& renderer, bool isDrawingForShadows) {
 	if (_shader)
 		setUpShader(renderer);
-	_heightmap->Draw();
+	_mesh->Draw();
+	drawWater(renderer);
 	postDraw();
 }
 
-HeightMapNodeParameter::HeightMapNodeParameter(const std::string& heightMapNoisePath, const std::string& heightMapTexPath, const std::string& heightMapBumpTexPath)
+void HeightMapNode::drawWater(OGLRenderer& renderer) {
+	renderer.BindShader(_waterShader);
+
+	glUniform3fv(glGetUniformLocation(_waterShader->GetProgram(), "cameraPos"), 1, (float*)&_camera->getPosition());
+
+	glUniform1i(glGetUniformLocation(_waterShader->GetProgram(), "diffuseTex"), 0);
+	glUniform1i(glGetUniformLocation(_waterShader->GetProgram(), "cubeTex"), 2);
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, _waterTexture);
+
+
+	glActiveTexture(GL_TEXTURE2);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, _currentCubeMap);
+
+	Vector3 hSize = _heightmap->getHeightmapSize();
+
+	renderer.setModelMatrix(Matrix4::Translation(hSize * 0.5f - Vector3(0, 35.0f, 0)) * Matrix4::Scale(hSize * 1.f) * Matrix4::Rotation(90, Vector3(1, 0, 0)));
+
+
+	renderer.setTextureMatrix(Matrix4::Translation(Vector3(_waterCycle, .0f, _waterCycle)) * Matrix4::Scale(Vector3(10, 10, 10)) * Matrix4::Rotation(_waterRotate, Vector3(0, 0, 1)));
+
+	renderer.UpdateShaderMatrices();
+	_waterMesh->Draw();
+
+}
+
+void HeightMapNode::update(float dt){
+	_waterRotate += dt * 2.f; //2degree a second.
+	_waterCycle += dt * .25f; //10 units a second.
+}
+
+HeightMapNodeParameter::HeightMapNodeParameter(const std::string& heightMapNoisePath, GLuint heighMapTexture, GLuint bumpTexture, GLuint waterTexture, GLuint currentCubeMap, Mesh* waterMesh, Shader* waterShader)
 {
-	_heightMapBumpTexPath = heightMapBumpTexPath;
+	_heightMapTexture = heighMapTexture;
 	_heightMapNoisePath = heightMapNoisePath;
-	_heightMapTexPath = heightMapTexPath;
+	_bumpTexture = bumpTexture;
+	_waterShader = waterShader;
+	_waterTexture = _waterTexture;
+	_currentCubeMap = currentCubeMap;
+	_waterMesh = waterMesh;
+}
+
+void HeightMapNode::setWaterCycle(float waterCycle){
+	_waterCycle = waterCycle;
+}
+
+float HeightMapNode::getWaterRotate() const{
+	return _waterRotate;
+}
+
+void HeightMapNode::setWaterRotate(float waterCycle){
+	_waterRotate = waterCycle;
+}
+
+float HeightMapNode::getWaterCycle() const{
+	return _waterCycle;
 }

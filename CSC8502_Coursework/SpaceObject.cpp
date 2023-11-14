@@ -1,8 +1,9 @@
 #include "SpaceObject.h"
 
-SpaceObjectParams::SpaceObjectParams(Vector3 transform, Vector3 scale) {
+SpaceObjectParams::SpaceObjectParams(Vector3 transform, Vector3 scale, const char* texturePath) {
 	_transform = transform;
 	_scale = scale;
+	_texturePath = texturePath;
 }
 
 SpaceObject::SpaceObject(Mesh* mesh, GLuint texture, Shader* shader, SpaceObjectParams params) : SceneNode(mesh) {

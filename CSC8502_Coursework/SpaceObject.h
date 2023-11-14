@@ -6,8 +6,9 @@ struct SpaceObjectParams {
 	float boundingRadius;
 	Vector3 _transform;
 	Vector3 _scale;
+	const char* _texturePath;
 
-	SpaceObjectParams(Vector3 transform, Vector3 scale);
+	SpaceObjectParams(Vector3 transform, Vector3 scale, const char* texturePath);
 };
 
 class SpaceObject : public SceneNode {

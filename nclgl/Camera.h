@@ -12,6 +12,7 @@ public:
 
 	Matrix4 buildViewMatrix();
 	inline Vector3 getPosition() { return _position; }
+	Vector3 getDirection() const;
 
 	void updateCamera(float dt = 1.0f);
 	inline void setYaw(float yaw) { _yaw = yaw; }

@@ -71,11 +71,11 @@ public:
 	Matrix4& getTextureMatrix();
 	void setTextureMatrix(Matrix4& textureMatrix);
 
-	
+	void SetShaderLight(const Light& light);
 protected:
 	virtual void	Resize(int x, int y);
 	void SetTextureRepeating(GLuint target, bool isRepeating);
-	void SetShaderLight(const Light& light);
+
 	void SetShaderForMultipleLights(const std::vector<Light*>& lights);
 
 	void StartDebugGroup(const std::string& s) {

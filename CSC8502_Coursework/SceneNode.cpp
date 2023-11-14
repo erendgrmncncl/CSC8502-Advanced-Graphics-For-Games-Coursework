@@ -140,7 +140,11 @@ void SceneNode::update(float dt) {
     }
 }
 
-void SceneNode::draw(OGLRenderer& renderer) {
+void SceneNode::draw(OGLRenderer& renderer, bool isDrawingForShadows) {
+    if (isDrawingForShadows) {
+        _mesh->Draw();
+        return;
+    }
     if (_shader) {
         setUpShader(renderer);
     }
@@ -175,6 +179,7 @@ void SceneNode::setUpShader(OGLRenderer& renderer){
     glUniform1i(glGetUniformLocation(_shader->GetProgram(), "useTexture"), _texture);
 
     glUniform1i(glGetUniformLocation(_shader->GetProgram(), "diffuseTex"), 0);
+
 }
 
 void SceneNode::postDraw()

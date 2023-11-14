@@ -28,15 +28,11 @@ Matrix4 Camera::buildViewMatrix() {
 		Matrix4::Rotation(-_yaw, Vector3(0, 1, 0)) *
 		Matrix4::Translation(-_position);
 }
-	
+
 void Camera::updateCamera(float dt) {
 	Vector2 mousePos = Window::GetMouse()->GetRelativePosition();
 	_pitch -= (mousePos.y);
 	_yaw -= (mousePos.x);
-	if (mousePos.x != 0)
-	{
-		int a = 0;
-	}
 
 	_pitch = std::min(_pitch, 90.0f);
 	_pitch = std::max(_pitch, -90.0f);
@@ -68,20 +64,25 @@ void Camera::updateCamera(float dt) {
 		if (keyboard->KeyDown(KEYBOARD_SPACE))
 			_position.y += currentSpeed;
 	}
-	else{
-		_position -= forward * currentSpeed;
+	else {
+		_position -= right * currentSpeed;
 	}
-	
+
 	if (keyboard->KeyDown(KEYBOARD_SHIFT))
 		_speed += 2.f;
 	if (keyboard->KeyDown(KEYBOARD_C)) {
 		if (_speed -= 2.f > 0.f) {
 			_speed -= 2.f;
 		}
-
 	}
 }
 
-void Camera::MoveAutomatically(float dt){
-	
+Vector3 Camera::getDirection() const {
+	Vector3 direction = _position;
+	direction.Normalise();
+	return direction;
+}
+
+void Camera::MoveAutomatically(float dt) {
+
 }
