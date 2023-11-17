@@ -3,34 +3,34 @@
 #include "../nclgl/OGLRenderer.h"
 
 class Camera;
+class Mesh;
 
-class Renderer : public OGLRenderer {
+class Renderer : public OGLRenderer
+{
 public:
-	Renderer(Window& window);
-	~Renderer();
+	Renderer(Window &parent);
+	~Renderer(void);
 
 	void UpdateScene(float dt) override;
 	void RenderScene() override;
+private:
+	void DrawShadowScene();
+	void DrawMainScene();
 
-
-protected:
-	float _sceneTime;
-
-	GLuint _shadowTex;
+	GLuint shadowTex;
 	GLuint shadowFBO;
-	GLuint _sceneDiffuse;
-	GLuint _sceneBump;
-	
-	Shader* _sceneShader;
-	Shader* _shadowShader;
-	
-	Camera* _camera;
-	Light* _light;
 
-	std::vector<Mesh*> _sceneMeshes;
-	std::vector<Matrix4> _sceneTransforms;
+	GLuint sceneDiffuse;
+	GLuint sceneBump;
+	float sceneTime;
 
-	void drawShadowScene();
-	void drawMainScene();
-	
+	Shader* sceneShader;
+	Shader* shadowShader;
+
+	vector<Mesh*> sceneMeshes;
+	vector<Matrix4> sceneTransforms;
+
+	Camera* camera;
+	Light* light;
 };
+
