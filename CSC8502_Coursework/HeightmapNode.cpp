@@ -14,25 +14,30 @@ HeightMapNode::HeightMapNode(Shader* _shader, Camera* camera, const HeightMapNod
 	_waterShader = parameters._waterShader;
 	_currentCubeMap = parameters._currentCubeMap;
 	_waterMesh = parameters._waterMesh;
+	_shadowTexture = parameters._shadowTexture;
 }
 
 void HeightMapNode::setUpShader(OGLRenderer& renderer) {
 	renderer.BindShader(_shader);
 	renderer.SetShaderLight(*_light);
+	
 	glUniform1i(glGetUniformLocation(_shader->GetProgram(), "diffuseTex"), 0);
+	glUniform1i(glGetUniformLocation(_shader->GetProgram(), "bumpTex"), 1);
+	glUniform1i(glGetUniformLocation(_shader->GetProgram(),"shadowTex"), 2);
+	glUniform3fv(glGetUniformLocation(_shader->GetProgram(), "cameraPos"), 1, (float*)&_camera->getPosition());
 
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, _texture);
 
-	glUniform1i(glGetUniformLocation(_shader->GetProgram(), "bumpTex"), 1);
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, _bumpTexture);
 
-	glUniform3fv(glGetUniformLocation(_shader->GetProgram(), "cameraPos"), 1, (float*)&_camera->getPosition());
+	glActiveTexture(GL_TEXTURE2);
+	glBindTexture(GL_TEXTURE_2D, _shadowTexture);
 
-	renderer.getModelMatrix().ToIdentity();
-	renderer.getTextureMatrix().ToIdentity();
-
+	Matrix4 modelMatrixToSet = renderer.getModelMatrix();
+	modelMatrixToSet.ToIdentity();
+	renderer.setModelMatrix(modelMatrixToSet);
 	renderer.UpdateShaderMatrices();
 }
 
@@ -51,6 +56,11 @@ Light* HeightMapNode::getLight()
 }
 
 void HeightMapNode::draw(OGLRenderer& renderer, bool isDrawingForShadows) {
+	if (isDrawingForShadows)
+	{
+		_mesh->Draw();
+		return;
+	}
 	if (_shader)
 		setUpShader(renderer);
 	_mesh->Draw();
@@ -90,15 +100,16 @@ void HeightMapNode::update(float dt){
 	_waterCycle += dt * .25f; //10 units a second.
 }
 
-HeightMapNodeParameter::HeightMapNodeParameter(const std::string& heightMapNoisePath, GLuint heighMapTexture, GLuint bumpTexture, GLuint waterTexture, GLuint currentCubeMap, Mesh* waterMesh, Shader* waterShader)
+HeightMapNodeParameter::HeightMapNodeParameter(const std::string& heightMapNoisePath, GLuint heighMapTexture, GLuint bumpTexture, GLuint waterTexture, GLuint currentCubeMap, GLuint shadowTexture,  Mesh* waterMesh, Shader* waterShader)
 {
 	_heightMapTexture = heighMapTexture;
 	_heightMapNoisePath = heightMapNoisePath;
 	_bumpTexture = bumpTexture;
 	_waterShader = waterShader;
-	_waterTexture = _waterTexture;
+	_waterTexture = waterTexture;
 	_currentCubeMap = currentCubeMap;
 	_waterMesh = waterMesh;
+	_shadowTexture = shadowTexture;
 }
 
 void HeightMapNode::setWaterCycle(float waterCycle){

@@ -130,6 +130,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="AnimatedSceneNode.cpp" />
     <ClCompile Include="CubeRobot.cpp" />
     <ClCompile Include="Frustum.cpp" />
     <ClCompile Include="HeightmapNode.cpp" />
@@ -141,6 +142,7 @@
     <ClCompile Include="SpaceObject.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="AnimatedSceneNode.h" />
     <ClInclude Include="CubeRobot.h" />
     <ClInclude Include="Frustum.h" />
     <ClInclude Include="HeightmapNode.h" />

@@ -7,4 +7,5 @@ class SkyboxNode : public SceneNode {
 protected:
 	void setUpShader(OGLRenderer& renderer) override;
 	void postDraw() override;
+	void draw(OGLRenderer& renderer, bool isDrawingForShadows) override;
 };

@@ -9,6 +9,8 @@ class Mesh;
 class Shader;
 class SkyboxNode;
 class Light;
+class MeshAnimation;
+class MeshMaterial;
 
 class Renderer : public OGLRenderer {
 public:
@@ -35,6 +37,9 @@ protected:
 	Mesh* _quad;
 	Mesh* _sphere;
 	Mesh* _tree;
+	Mesh* _animatedMesh;
+	MeshAnimation* _animateMeshAnimation;
+	MeshMaterial* _animatedMeshMaterial;
 
 	GLuint _heightMapTexture;
 	GLuint _bumpTexture;
@@ -45,14 +50,25 @@ protected:
 	GLuint _waterTex;
 
 	GLuint _shadowFBO;
+	GLuint _postProcessFBO;
+	GLuint _bufferFBO;
+
+	GLuint _bufferColourTex[2];
+	GLuint _bufferDepthTex;
 
 	Shader* _shader;
+	Shader* _perPixelSceneShader;
+	Shader* _shadowSceneShader;
 	Shader* _skyboxShader;
 	Shader* _lightShader;
 	Shader* _reflectShader;
 	Shader* _shadowShader;
+	Shader* _animationShader;
+	Shader* _postProcessShader;
 
 	Frustum _frameFrustum;
+
+	Vector3 _heightMapSize;
 	
 	std::vector<SceneNode*> _transparentNodeList;
 	std::vector<SceneNode*> _nodeList;
@@ -69,4 +85,6 @@ protected:
 	void toggleScene();
 	void onChangeScene();
 	void drawShadowScene();
+	void drawPostProcess();
+	void presentScene();
 };

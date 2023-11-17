@@ -9,6 +9,7 @@
 #include <vector>
 
 class OGLRenderer;
+class Camera;
 
 class SceneNode {
 public:
@@ -46,11 +47,24 @@ public:
 
 	GLuint getTexture() const;
 	void setTexture(GLuint texture);
+
+	GLuint getShadowTexture() const;
+	void setShadowTexture(GLuint shadowTexture);
+
+	GLuint getBumpTexture() const;
+	void setBumpTexture(GLuint bumpTexture);
+
 	static bool compareByCameraDistance(SceneNode* firstNode, SceneNode* secondNode);
 
 	void addChild(SceneNode* child);
 	void removeChild(SceneNode* child);
 
+	Light* getLight();
+	void setLight(Light* light);
+
+	Camera* getCamera();
+	void setCamera(Camera* camera);
+	
 	virtual void update(float dt);
 	virtual void draw(OGLRenderer& renderer, bool isDrawingForShadows = false);
 
@@ -59,14 +73,21 @@ public:
 
 protected:
 	bool _isFrustrumCheckable = true;
+	bool _testMove = false;
 
 	float _boundingRadius;
 	float _distanceFromCamera;
 
 	GLuint _texture;
-	SceneNode* _parent;
-	Mesh* _mesh;
+	GLuint _shadowTexture;
+	GLuint _bumpTexture;
+
+	SceneNode* _parent = nullptr;
+	Mesh* _mesh = nullptr;
 	Shader* _shader = nullptr;
+	Light* _light = nullptr;
+	Camera* _camera = nullptr;
+
 	Matrix4 _worldTransform;
 	Matrix4 _transform;
 	Vector3 _modelScale;

@@ -11,11 +11,15 @@ struct HeightMapNodeParameter {
 	GLuint _bumpTexture;
 	GLuint _waterTexture;
 	GLuint _currentCubeMap;
+	GLuint _shadowTexture;
 
 	Shader* _waterShader;
 	Mesh* _waterMesh;
 
-	HeightMapNodeParameter(const std::string& heightMapNoisePath, GLuint heightmapTexture, GLuint bumpTexture, GLuint waterTexture, GLuint currentCubeMap, Mesh* waterMesh, Shader* waterShader);
+	HeightMapNodeParameter(const std::string& heightMapNoisePath, 
+		GLuint heightmapTexture, GLuint bumpTexture, 
+		GLuint waterTexture, GLuint currentCubeMap, GLuint shadowTexture,
+		Mesh* waterMesh, Shader* waterShader);
 
 
 };
@@ -38,14 +42,11 @@ protected:
 	float _waterCycle = 0.0f;
 	float _waterRotate = 0.0f;
 
-	GLuint _bumpTexture;
 	GLuint _texture;
 	GLuint _waterTexture;
 	GLuint _currentCubeMap;
 
 	HeightMap* _heightmap;
-	Light* _light;
-	Camera* _camera;
 	Shader* _waterShader;
 
 	Mesh* _waterMesh;
