@@ -44,6 +44,7 @@ void AnimatedSceneNode::setUpShader(OGLRenderer& renderer){
 
 void AnimatedSceneNode::draw(OGLRenderer& renderer, bool isDrawingForShadow){
 	if (isDrawingForShadow){
+		//TODO: draw shadow anim. Set up shadow anim shader in renderer.
 		return;
 	}
 

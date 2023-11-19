@@ -58,6 +58,7 @@ protected:
 	GLuint _lowPolyTex;
 	GLuint _lowPolyBumpTex;
 	GLuint _treeBumpTex;
+	GLuint _rainTexture;
 
 	GLuint _shadowFBO;
 	GLuint _postProcessFBO;
@@ -80,11 +81,22 @@ protected:
 	Frustum _frameFrustum;
 
 	HeightMap* _heightMap;
+
+
+	std::vector<Vector3> _planetSceneCameraNodesToVisit;
+	std::vector<Vector3> _spaceSceneCameraNodesToVisit;
 	
 	std::vector<SceneNode*> _transparentNodeList;
 	std::vector<SceneNode*> _animatedNodeList;
 	std::vector<SceneNode*> _nodeList;
 	
+	void initCameraFollowNodes();
+	void initMeshes();
+	void initTextures();
+	void initBuffers();
+	void initShaders();
+
+
 	void buildNodeLists(SceneNode* nodeToBuild);
 	void sortNodeLists();
 	void drawNodes(bool isDrawingForShadows = false);

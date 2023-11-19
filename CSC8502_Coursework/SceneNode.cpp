@@ -235,6 +235,7 @@ void SceneNode::initMovement(std::vector<Vector3> nodesToVisit, bool isLoopable,
 	_isLoopingBetweenNodes = isLoopable;
 	_nodesToVisit = nodesToVisit;
 	_speed = speed;
+	_currentNodeToVisit = nodesToVisit[0];
 }
 
 std::vector<SceneNode*>::const_iterator SceneNode::getChildIteratorStart()

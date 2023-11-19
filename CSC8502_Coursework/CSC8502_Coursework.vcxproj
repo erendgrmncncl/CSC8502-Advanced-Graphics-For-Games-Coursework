@@ -134,6 +134,7 @@
     <ClCompile Include="CubeRobot.cpp" />
     <ClCompile Include="Frustum.cpp" />
     <ClCompile Include="HeightmapNode.cpp" />
+    <ClCompile Include="ParticleNode.cpp" />
     <ClCompile Include="Plane.cpp" />
     <ClCompile Include="Renderer.cpp" />
     <ClCompile Include="SceneNode.cpp" />
@@ -146,6 +147,7 @@
     <ClInclude Include="CubeRobot.h" />
     <ClInclude Include="Frustum.h" />
     <ClInclude Include="HeightmapNode.h" />
+    <ClInclude Include="ParticleNode.h" />
     <ClInclude Include="Renderer.h" />
     <ClInclude Include="SceneNode.h" />
     <ClInclude Include="SkyboxNode.h" />

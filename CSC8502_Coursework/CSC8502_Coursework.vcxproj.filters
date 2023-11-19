@@ -11,6 +11,7 @@
     <ClCompile Include="SpaceObject.cpp" />
     <ClCompile Include="HeightmapNode.cpp" />
     <ClCompile Include="AnimatedSceneNode.cpp" />
+    <ClCompile Include="ParticleNode.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="SceneNode.h" />
@@ -21,6 +22,7 @@
     <ClInclude Include="SpaceObject.h" />
     <ClInclude Include="HeightmapNode.h" />
     <ClInclude Include="AnimatedSceneNode.h" />
+    <ClInclude Include="ParticleNode.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Plane.h" />

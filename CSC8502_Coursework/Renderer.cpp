@@ -12,6 +12,7 @@
 #include "../nclgl/MeshAnimation.h"
 #include "../nclgl/MeshMaterial.h"
 #include "../nclgl/HeightMap.h"
+#include "ParticleNode.h"
 
 namespace {
 
@@ -41,8 +42,14 @@ namespace {
 	constexpr const char* SPHERE_MESH_FILE_NAME = "Sphere.msh";
 	constexpr const char* TREE_MESH_FILE_NAME = "Tree.msh";
 	constexpr const char* LANTERN_PLANT_MESH_FILE_NAME = "LanternPlant.msh";
+	constexpr const char* ANIMATED_CHARACTER_MESH_FILE_NAME = "Role_T.msh";
+	constexpr const char* LANTERN_PLANT_MEST_MATERIAL = "LanternPlant.mat";
 
+	constexpr const char* ANIMATED_CHARACTER_ANIMATION_FILE_NAME = "Role_T.anm";
+
+	constexpr const char* ANIMATED_CHARACTER_MATERIAL_FILE_NAME = "Role_T.mat";
 	constexpr const char* LANTERN_PLANT_MATERIAL_FILE_NAME = "LanternPlant.mat";
+	constexpr const char* NOISE_MAP_FILE_NAME = "islandNoise.jpg";
 
 	constexpr const char* SCENE_SHADER_VERTEX_FILE_NAME = "SceneVertex.glsl";
 	constexpr const char* SCENE_SHADER_FRAGMENT_FILE_NAME = "SceneFragment.glsl";
@@ -62,120 +69,45 @@ namespace {
 	constexpr const char* PRESENT_SHADER_VERTEX_FILE_NAME = "TexturedVertex.glsl";
 	constexpr const char* PRESENT_SHADER_FRAGMENT_FILE_NAME = "TexturedFragment.glsl";
 
+	constexpr const char* REFLECT_SHADER_VERTEX_FILE_NAME = "reflectVertex.glsl";
+	constexpr const char* REFLECT_SHADER_VERTEX_FRAGMENT_NAME = "reflectFragment.glsl";
+	
+	constexpr const char* SHADOW_SHADER_VERTEX_FILE_NAME = "shadowSceneVertex.glsl";
+	constexpr const char* SHADOW_SHADER_FRAGMENT_FILE_NAME = "shadowSceneFragment.glsl";
 }
 
 Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 
-	std::vector<Vector3> nodesToFollow;
-	nodesToFollow.push_back(Vector3(-912, 341, 2));
-	nodesToFollow.push_back(Vector3(1012, 341, 2));
-	nodesToFollow.push_back(Vector3(100, 0, 2));
-	nodesToFollow.push_back(Vector3(0, 0, 2000));
+	initCameraFollowNodes();
 
-	_camera = new Camera(.0f, 90.f, Vector3(812, 341, 2), nodesToFollow);
-	_quad = Mesh::GenerateQuad();
-	_sphere = Mesh::LoadFromMeshFile(SPHERE_MESH_FILE_NAME);
-	_tree = Mesh::LoadFromMeshFile(TREE_MESH_FILE_NAME);
+	_camera = new Camera(.0f, 90.f, Vector3(812, 341, 2));
+	_camera->initAutoMovement(_spaceSceneCameraNodesToVisit, false, [=]() {
+		toggleScene();
+	});
 
-	_lanternPlant = Mesh::LoadFromMeshFile(LANTERN_PLANT_MESH_FILE_NAME);
-	_lanternPlantMeshMaterial = new MeshMaterial("LanternPlant.mat");
-
-	_animatedMesh = Mesh::LoadFromMeshFile("Role_T.msh");
-	_animateMeshAnimation = new MeshAnimation("Role_T.anm");
-	_animatedMeshMaterial = new MeshMaterial("Role_T.mat");
+	initMeshes();
 
 	_heightMap = new HeightMap(TEXTUREDIR"islandNoise.jpg");
-
-	_shader = new Shader(SCENE_SHADER_VERTEX_FILE_NAME, SCENE_SHADER_FRAGMENT_FILE_NAME);
-	_skyboxShader = new Shader(SKYBOX_SHADER_VERTEX_FILE_NAME, SKYBOX_SHADER_FRAGMENT_FILE_NAME);
-	_lightShader = new Shader("PerPixelVertex.glsl", "PerPixelFragment.glsl");
-	_reflectShader = new Shader("reflectVertex.glsl", "reflectFragment.glsl");
-	_shadowShader = new Shader("shadowSceneVertex.glsl", "shadowSceneFragment.glsl");
-	_shadowSceneShader = new Shader("shadowSceneVertex.glsl", "shadowSceneFragment.glsl");
-	_perPixelSceneShader = new Shader(SCENE_SHADER_VERTEX_WITH_SHADOWS, SCENE_SHADER_FRAGMENT_WITH_SHADOWS);
-	_animationShader = new Shader(ANIMATED_SHADER_VERTEX_FILE_NAME, ANIMATED_SHADER_FRAGMENT_FILE_NAME);
-	_postProcessShader = new Shader(POST_PROCESS_SHADER_VERTEX_FILE_NAME, POST_PROCESS_SHADER_FRAGMENT_FILE_NAME);
-	_presentShader = new Shader(PRESENT_SHADER_VERTEX_FILE_NAME, PRESENT_SHADER_FRAGMENT_FILE_NAME);
-
+	initShaders();
 	bool isSkyboxShaderInitSuccessfully = _skyboxShader->LoadSuccess();
 	bool isLightShaderInitSuccessfully = _lightShader->LoadSuccess();
 	bool isSceneShaderIniSuccessfully = _shader->LoadSuccess();
 	bool isReflectShaderInitSuccessfully = _reflectShader->LoadSuccess();
-	bool isShadowSceneShaderInitSuccessfully = _shadowSceneShader->LoadSuccess();
 	bool isPerPixelSceneShaderInitSuccessfully = _perPixelSceneShader->LoadSuccess();
 	bool isAnimationShaderInitSuccessfully = _animationShader->LoadSuccess();
 	bool isPostProcessShaderInitSuccessfully = _postProcessShader->LoadSuccess();
 
 	if (!isSceneShaderIniSuccessfully || !isSkyboxShaderInitSuccessfully || !isLightShaderInitSuccessfully
-		|| !isReflectShaderInitSuccessfully || !isShadowSceneShaderInitSuccessfully || !isPerPixelSceneShaderInitSuccessfully
+		|| !isReflectShaderInitSuccessfully  || !isPerPixelSceneShaderInitSuccessfully
 		|| !isAnimationShaderInitSuccessfully || !isPostProcessShaderInitSuccessfully)
 		return;
-	_treeTexture = SOIL_load_OGL_texture(TEXTUREDIR"TreeDiffuse.png",
-		SOIL_LOAD_AUTO,
-		SOIL_CREATE_NEW_ID, 0);
 
-	_cubeMap = LoadCubeMap(cubePaths);
-	_planetCubemap = LoadCubeMap(planetCubeMapPaths);
+	initTextures();
 
-	_heightMapTexture = SOIL_load_OGL_texture(TEXTUREDIR"Barren Reds.JPG", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
-	_bumpTexture = SOIL_load_OGL_texture(TEXTUREDIR"Barren RedsDOT3.JPG", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
-	_waterTex = SOIL_load_OGL_texture(TEXTUREDIR"water.TGA", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
-	_lowPolyTex = SOIL_load_OGL_texture(TEXTUREDIR"Colors3.png", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
-	_lowPolyBumpTex = SOIL_load_OGL_texture(TEXTUREDIR"Colors3DOT3.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
-	_treeBumpTex = SOIL_load_OGL_texture(TEXTUREDIR"TreeDOT3.png", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
-
-	if (!_bumpTexture || !_heightMapTexture || !_waterTex)
+	if (!_bumpTexture || !_heightMapTexture || !_waterTex || !_lowPolyTex || !_lowPolyBumpTex || !_treeBumpTex || !_rainTexture)
 		return;
 
-	glGenTextures(1, &_shadowTex);
-	glBindTexture(GL_TEXTURE_2D, _shadowTex);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-
-
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOW_SIZE, SHADOW_SIZE, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
-	glBindTexture(GL_TEXTURE_2D, 0);
-
-
-	glGenFramebuffers(1, &_shadowFBO);
-	glBindFramebuffer(GL_FRAMEBUFFER, _shadowFBO);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, _shadowTex, 0);
-	glDrawBuffer(GL_NONE);
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-	//Generate scene depth texture
-	glGenTextures(1, &_bufferDepthTex);
-	glBindTexture(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH24_STENCIL8, width, height, 0, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, NULL);
-
-	//ColourTexture
-	for (int i = 0; i < 2; ++i) {
-		glGenTextures(1, &_bufferColourTex[i]);
-		glBindTexture(GL_TEXTURE_2D, _bufferColourTex[i]);
-		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
-		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
-		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-	}
-
-	glGenFramebuffers(1, &_bufferFBO);
-	glGenFramebuffers(1, &_postProcessFBO);
-
-	glBindFramebuffer(GL_FRAMEBUFFER, _bufferFBO);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, _bufferDepthTex, 0);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, GL_TEXTURE_2D, _bufferDepthTex, 0);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, _bufferColourTex[0], 0);
-
-	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE || !_bufferDepthTex || !_bufferColourTex[0]) return;
-
-	glBindFramebuffer(GL_FRAMEBUFFER, _postProcessFBO);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, _bufferColourTex[1], 0);
+	initBuffers();
 
 	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) return;
 
@@ -200,6 +132,115 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	init = true;
 }
 
+void Renderer::initMeshes() {
+	_quad = Mesh::GenerateQuad();
+	_sphere = Mesh::LoadFromMeshFile(SPHERE_MESH_FILE_NAME);
+	_tree = Mesh::LoadFromMeshFile(TREE_MESH_FILE_NAME);
+	_lanternPlant = Mesh::LoadFromMeshFile(LANTERN_PLANT_MESH_FILE_NAME);
+	_animatedMesh = Mesh::LoadFromMeshFile(ANIMATED_CHARACTER_MESH_FILE_NAME);
+
+	_lanternPlantMeshMaterial = new MeshMaterial(LANTERN_PLANT_MEST_MATERIAL);
+	_animateMeshAnimation = new MeshAnimation(ANIMATED_CHARACTER_ANIMATION_FILE_NAME);
+	_animatedMeshMaterial = new MeshMaterial(ANIMATED_CHARACTER_MATERIAL_FILE_NAME);
+}
+
+void Renderer::initTextures(){
+	_treeTexture = SOIL_load_OGL_texture(TEXTUREDIR"TreeDiffuse.png",
+		SOIL_LOAD_AUTO,
+		SOIL_CREATE_NEW_ID, 0);
+
+	_cubeMap = LoadCubeMap(cubePaths);
+	_planetCubemap = LoadCubeMap(planetCubeMapPaths);
+
+	_heightMapTexture = SOIL_load_OGL_texture(TEXTUREDIR"Barren Reds.JPG", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
+	_bumpTexture = SOIL_load_OGL_texture(TEXTUREDIR"Barren RedsDOT3.JPG", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
+	_waterTex = SOIL_load_OGL_texture(TEXTUREDIR"water.TGA", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
+	_lowPolyTex = SOIL_load_OGL_texture(TEXTUREDIR"Colors3.png", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
+	_lowPolyBumpTex = SOIL_load_OGL_texture(TEXTUREDIR"Colors3DOT3.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
+	_treeBumpTex = SOIL_load_OGL_texture(TEXTUREDIR"TreeDOT3.png", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
+	_rainTexture = SOIL_load_OGL_texture(TEXTUREDIR"rain.png", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
+}
+
+void Renderer::initBuffers(){
+	glGenTextures(1, &_shadowTex);
+	glBindTexture(GL_TEXTURE_2D, _shadowTex);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+
+
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOW_SIZE, SHADOW_SIZE, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+
+	glGenFramebuffers(1, &_shadowFBO);
+	glBindFramebuffer(GL_FRAMEBUFFER, _shadowFBO);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, _shadowTex, 0);
+	glDrawBuffer(GL_NONE);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	glGenTextures(1, &_bufferDepthTex);
+	glBindTexture(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH24_STENCIL8, width, height, 0, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, NULL);
+
+	for (int i = 0; i < 2; ++i) {
+		glGenTextures(1, &_bufferColourTex[i]);
+		glBindTexture(GL_TEXTURE_2D, _bufferColourTex[i]);
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+	}
+
+	glGenFramebuffers(1, &_bufferFBO);
+	glGenFramebuffers(1, &_postProcessFBO);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, _bufferFBO);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, _bufferDepthTex, 0);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, GL_TEXTURE_2D, _bufferDepthTex, 0);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, _bufferColourTex[0], 0);
+
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE || !_bufferDepthTex || !_bufferColourTex[0]) return;
+
+	glBindFramebuffer(GL_FRAMEBUFFER, _postProcessFBO);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, _bufferColourTex[1], 0);
+}
+
+void Renderer::initShaders(){
+	_shader = new Shader(SCENE_SHADER_VERTEX_FILE_NAME, SCENE_SHADER_FRAGMENT_FILE_NAME);
+	_skyboxShader = new Shader(SKYBOX_SHADER_VERTEX_FILE_NAME, SKYBOX_SHADER_FRAGMENT_FILE_NAME);
+	_lightShader = new Shader(SCENE_SHADER_VERTEX_WITH_SHADOWS, SCENE_SHADER_FRAGMENT_WITH_SHADOWS);
+	_reflectShader = new Shader(REFLECT_SHADER_VERTEX_FILE_NAME, REFLECT_SHADER_VERTEX_FRAGMENT_NAME);
+	_shadowShader = new Shader(SHADOW_SHADER_VERTEX_FILE_NAME, SHADOW_SHADER_FRAGMENT_FILE_NAME);
+	_perPixelSceneShader = new Shader(SCENE_SHADER_VERTEX_WITH_SHADOWS, SCENE_SHADER_FRAGMENT_WITH_SHADOWS);
+	_animationShader = new Shader(ANIMATED_SHADER_VERTEX_FILE_NAME, ANIMATED_SHADER_FRAGMENT_FILE_NAME);
+	_postProcessShader = new Shader(POST_PROCESS_SHADER_VERTEX_FILE_NAME, POST_PROCESS_SHADER_FRAGMENT_FILE_NAME);
+	_presentShader = new Shader(PRESENT_SHADER_VERTEX_FILE_NAME, PRESENT_SHADER_FRAGMENT_FILE_NAME);
+}
+
+void Renderer::initCameraFollowNodes(){
+	_spaceSceneCameraNodesToVisit.push_back(Vector3(-812, 341, 2));
+	_spaceSceneCameraNodesToVisit.push_back(Vector3(-7417, 1391, -750));
+	_spaceSceneCameraNodesToVisit.push_back(Vector3(-16001, 1391, -18753));
+	//_spaceSceneCameraNodesToVisit.push_back(Vector3(-33625, 1391, -15717));
+
+	_planetSceneCameraNodesToVisit.push_back(Vector3(3838, 390, 4112));
+	_planetSceneCameraNodesToVisit.push_back(Vector3(3771, 390, 5886));
+	_planetSceneCameraNodesToVisit.push_back(Vector3(3894, 1730, 7434));
+	_planetSceneCameraNodesToVisit.push_back(Vector3(633, 1328, 3171));
+	_planetSceneCameraNodesToVisit.push_back(Vector3(1471, 1462, 777));
+	_planetSceneCameraNodesToVisit.push_back(Vector3(3456, 1462, 1260));
+	_planetSceneCameraNodesToVisit.push_back(Vector3(6052, 1462, 2873));
+	_planetSceneCameraNodesToVisit.push_back(Vector3(4851, 1462, 5804));
+	_planetSceneCameraNodesToVisit.push_back(Vector3(8510, 7556, -2350));
+
+}
+
 Renderer::~Renderer() {
 	delete _spaceRoot;
 	delete _planetRoot;
@@ -220,15 +261,12 @@ void Renderer::UpdateScene(float dt) {
 	}
 
 	_camera->updateCamera(dt);
-	//_currentLight->setPosition(_camera->getPosition());
 	viewMatrix = _camera->buildViewMatrix();
 	projMatrix = Matrix4::Perspective(1.f, 500000.f, (float)width / (float)height, 90.f);
 	_frameFrustum.fromMatrix(projMatrix * viewMatrix);
 
-	//viewMatrix = Matrix4::BuildViewMatrix(_camera->getPosition(), _camera->getDirection());
-
-	_waterRotate += dt * 2.f; //2degree a second.
-	_waterCycle += dt * .25f; //10 units a second.
+	_waterRotate += dt * 2.f; 
+	_waterCycle += dt * .25f;
 
 	_globalRoot->update(dt);
 }
@@ -247,7 +285,6 @@ void Renderer::buildNodeLists(SceneNode* from) {
 		else {
 			_nodeList.push_back(from);
 		}
-
 	}
 
 	for (vector<SceneNode*>::const_iterator i = from->getChildIteratorStart(); i != from->getChildIteratorEnd(); i++) {
@@ -270,7 +307,6 @@ void Renderer::drawNodes(bool isDrawingForShadows) {
 		else
 		{
 			i->setUpShader(*this);
-
 		}
 		drawNode(i, isDrawingForShadows);
 	}
@@ -287,7 +323,6 @@ void Renderer::drawNodes(bool isDrawingForShadows) {
 
 		glUniform3fv(glGetUniformLocation(_perPixelSceneShader->GetProgram(), "cameraPos"), 1, (float*)&_camera->getPosition());
 	}
-
 
 	for (const auto& i : _nodeList) {
 		if (isDrawingForShadows) {
@@ -326,8 +361,6 @@ void Renderer::InitGlobalSceneNode() {
 
 	_globalRoot = new SceneNode();
 	_globalRoot->setNodeName("global_node");
-	//InitSkyboxNode();
-	//_globalRoot->addChild(_skyboxNode);
 }
 
 void Renderer::InitSpaceSceneNodes() {
@@ -335,13 +368,13 @@ void Renderer::InitSpaceSceneNodes() {
 	_spaceRoot->setNodeName("space_root");
 
 	for (auto planetData : spaceObjectsDataMap) {
-		GLuint texture = SOIL_load_OGL_texture(planetData.second._texturePath,
+		GLuint planetTexture = SOIL_load_OGL_texture(planetData.second._texturePath,
 			SOIL_LOAD_AUTO,
 			SOIL_CREATE_NEW_ID, 0);
-		auto* planet = new SpaceObject(_sphere, texture, _perPixelSceneShader, planetData.second);
+		auto* planet = new SpaceObject(_sphere, planetTexture, _perPixelSceneShader, planetData.second);
 		planet->setNodeName(planetData.first);
 		//planet->setBumpTexture(_bumpTexture);
-		planet->setShadowTexture(_shadowTex);
+		//planet->setShadowTexture(_shadowTex);
 		_spaceRoot->addChild(planet);
 	}
 }
@@ -388,27 +421,33 @@ void Renderer::InitPlanetSceneNodes() {
 	animatedNode->setBoundingRadius(1.f);
 	animatedNode->setNodeName("animated_node");
 	animatedNode->setModelScale(Vector3(100, 100, 100));
-	animatedNode->setTransform(Matrix4::Translation(Vector3(3115, _heightMap->getHeightmapSize().y, 6060)));
+	animatedNode->setTransform(Matrix4::Translation(Vector3(3859, 175, 4405)));
 
 	std::vector<Vector3> nodesToFollow;
-	/*nodesToFollow.push_back(Vector3(3005, _heightMap->getHeightmapSize().y, 100));
-	nodesToFollow.push_back(Vector3(3225, _heightMap->getHeightmapSize().y, 100));
-	animatedNode->initMovement(nodesToFollow, true,50.f);*/
+	nodesToFollow.push_back(Vector3(3633, 175, 6080));
+	animatedNode->initMovement(nodesToFollow, false, 50.f);
 	_planetRoot->addChild(animatedNode);
 
+	auto* particleSpawnerNode = new ParticleNode(_sphere, _rainTexture);
+
+	particleSpawnerNode->setCamera(_camera);
+	particleSpawnerNode->setLight(_currentLight);
+
+	particleSpawnerNode->setShader(_perPixelSceneShader);
+	particleSpawnerNode->setColour(Vector4(1.0f, 1.0f, 1.0f, 1.0f));
+	particleSpawnerNode->setBoundingRadius(1.f);
+	_planetRoot->addChild(particleSpawnerNode);
 
 	auto* lanternPlant = new SceneNode(_lanternPlant);
 	lanternPlant->setBumpTexture(_lowPolyBumpTex);
 	lanternPlant->setTexture(_lowPolyTex);
 	lanternPlant->setShadowTexture(_shadowTex);
 	lanternPlant->setShader(_perPixelSceneShader);
-	//lanternPlant->setModelScale(Vector3(1.f, 1.f, 1.f));
 	lanternPlant->setBoundingRadius(5.f);
 	lanternPlant->setModelScale(Vector3(100, 100, 100));
-	lanternPlant->setTransform(Matrix4::Translation(Vector3(2956, 155, 3167)));
+	lanternPlant->setTransform(Matrix4::Translation(Vector3(3416, 200, 5612)));
 	lanternPlant->setNodeName("lantern_plant_node");
 	_planetRoot->addChild(lanternPlant);
-
 
 	m_planetSceneCameraPos = _heightMap->getHeightmapSize() * Vector3(.5f, 1.f, .5f);
 	m_planetSceneCameraPos.y += 100.f;
@@ -429,7 +468,6 @@ void Renderer::RenderScene() {
 	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 	buildNodeLists(_globalRoot);
 	sortNodeLists();
-
 
 	if (_sceneToggle && _isBlurOn)
 	{
@@ -467,9 +505,9 @@ void Renderer::RenderScene() {
 		drawPostProcess();
 
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-		glEnable(GL_DEPTH_TEST);
-		presentScene();
 
+		presentScene();
+		glEnable(GL_DEPTH_TEST);
 
 		glViewport(0, 0, width, height);
 	}
@@ -485,25 +523,36 @@ void Renderer::clearNodeLists() {
 void Renderer::toggleScene() {
 	_sceneToggle = !_sceneToggle;
 	_globalRoot->removeChild(_currentSceneRoot);
-	if (_sceneToggle)
+	if (_sceneToggle){
 		_currentSceneRoot = _planetRoot;
+		_camera->initAutoMovement(_planetSceneCameraNodesToVisit, false, [=]() {
+			toggleScene();
+		});
+	}
 	else
+	{
 		_currentSceneRoot = _spaceRoot;
+		_camera->initAutoMovement(_spaceSceneCameraNodesToVisit, false, [=]() {
+			toggleScene();
+		});
+	}
+
 	_globalRoot->addChild(_currentSceneRoot);
 	onChangeScene();
 }
 
 void Renderer::onChangeScene() {
 	if (_sceneToggle) {
-		_camera->setPosition(m_planetSceneCameraPos);
+		_camera->setPosition(_planetSceneCameraNodesToVisit[0]);
 
 		_currentLight->setPosition(Vector3(10000.f, 12000.f, -18000.f));
-		_currentLight->setRadius(40000.f);
+		_currentLight->setRadius(50000.f);
 	}
 	else
 	{
+		_camera->setPosition(_spaceSceneCameraNodesToVisit[0]);
 		_currentLight->setPosition(Vector3(20385, 1331, -215));
-		_currentLight->setRadius(10000000.f);
+		_currentLight->setRadius(50000.f);
 
 	}
 }
@@ -516,8 +565,6 @@ void Renderer::drawShadowScene() {
 	glCullFace(GL_FRONT);
 	glViewport(0, 0, SHADOW_SIZE, SHADOW_SIZE);
 	glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
-
-
 
 	viewMatrix = Matrix4::BuildViewMatrix(_currentLight->getPosition() * Vector3(1.0f, 1.0f, 1.0f), _heightMap->getHeightmapSize() * Vector3(0.5f, 0.5f, 0.5f));
 	projMatrix = Matrix4::Perspective(1000, 500000.f, 1, 90);
@@ -539,9 +586,7 @@ void Renderer::drawShadowScene() {
 	else
 	{
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
 	}
-
 }
 
 void Renderer::drawPostProcess() {

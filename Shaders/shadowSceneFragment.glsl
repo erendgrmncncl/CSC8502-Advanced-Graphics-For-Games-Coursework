@@ -51,6 +51,6 @@ void main(void){
 	fragColour.rgb = surface * lambert * attenuation;
 	fragColour.rgb += (lightColour.rgb * specFactor) * attenuation * 0.33;
 	fragColour.rgb *= shadow;
-	fragColour.rgb += surface * 0.1f;
+	fragColour.rgb += surface * 1.f;
 	fragColour.a = diffuse.a;
 }

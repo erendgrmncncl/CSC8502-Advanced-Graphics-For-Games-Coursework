@@ -1,10 +1,11 @@
 #include "Camera.h"
 #include "Window.h"
 #include <math.h>
-
+#include "Utility.h"
 namespace {
 	constexpr const int SPEED_INIT_VAL = 40.f;
 	constexpr const float NODE_REACH_THRESHOLD = 10.f;
+	constexpr const float SMOOTHNESS_FACTOR = 5.f;
 }
 
 Camera::Camera() {
@@ -18,15 +19,6 @@ Camera::Camera(float pitch, float yaw, Vector3 position) {
 	_pitch = pitch;
 	_position = position;
 	_speed = SPEED_INIT_VAL;
-}
-
-Camera::Camera(float pitch, float yaw, Vector3 position, std::vector<Vector3> nodeListToFollow) {
-	_yaw = yaw;
-	_pitch = pitch;
-	_position = position;
-	_speed = SPEED_INIT_VAL;
-	_nodeListToFollow = nodeListToFollow;
-	_currentNodeToFollow = _nodeListToFollow[currentNodeToFollowIndex];
 }
 
 Camera::~Camera() {
@@ -82,17 +74,27 @@ void Camera::updateCamera(float dt) {
 			currentNodeToFollowIndex++;
 
 			if (_nodeListToFollow.size() == currentNodeToFollowIndex) {
-				_nodeListToFollow = _completedNodeListToFollow;
-				_completedNodeListToFollow.clear();
 				currentNodeToFollowIndex = 0;
+				if (this->isAutomaticMovementLoopable)
+				{
+					_nodeListToFollow = _completedNodeListToFollow;
+					_completedNodeListToFollow.clear();
+			
+				}
+				else
+				{
+					isMovingAutomatically = false;
+					_callback();
+					return;
+				}
 			}
 
 			_currentNodeToFollow = _nodeListToFollow[currentNodeToFollowIndex];
 		}
 
 		Vector3 direction = (_currentNodeToFollow - _position).Normalised();
-		
-		lookAt(direction);
+
+		lookAt(direction, dt);
 		_position += direction * currentSpeed;
 	}
 
@@ -105,28 +107,33 @@ void Camera::updateCamera(float dt) {
 	}
 }
 
-void Camera::lookAt(const Vector3& direction){
+void Camera::initAutoMovement(std::vector<Vector3> nodesToFollow, bool isLoopable, std::function<void(void)> callbackAfterNodesFinished) {
+	currentNodeToFollowIndex = 0;
+	isMovingAutomatically = true;
+	_completedNodeListToFollow.clear();
+	_nodeListToFollow = nodesToFollow;
+	_currentNodeToFollow = _nodeListToFollow[currentNodeToFollowIndex];
+	_callback = callbackAfterNodesFinished;
+}
 
-	// Calculate pitch
-	_pitch = RadiansToDegrees(asin(-direction.y));
+void Camera::lookAt(const Vector3& direction, float dt) {
 
-	// Calculate yaw
-	_yaw = RadiansToDegrees(-atan2(direction.x, direction.z));
+	_pitch = Utility::radiansToDegrees(asin(-direction.y));
 
-	// Ensure pitch is within the valid range (-90 to 90 degrees)
+
+	_yaw = Utility::radiansToDegrees(-atan2(direction.x, direction.z));
+
+	//_pitch = Utility::lerp(_pitch, targetPitch, SMOOTHNESS_FACTOR * dt);
+	//_yaw = Utility::lerp(_yaw, targetYaw, SMOOTHNESS_FACTOR * dt);
+
+
 	_pitch = std::min(_pitch, 90.0f);
 	_pitch = std::max(_pitch, -90.0f);
 
-	// Ensure yaw is within the valid range (0 to 360 degrees)
 	if (_yaw < 0)
 		_yaw += 360.0f;
 	if (_yaw > 360.0f)
 		_yaw -= 360.0f;
-}
-
-float Camera::RadiansToDegrees(float radians){
-	float pi = std::atan(1) * 4;
-	return radians * (180.0f / pi);
 }
 
 Vector3 Camera::getDirection() const {
