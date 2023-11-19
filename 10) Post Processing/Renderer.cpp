@@ -109,6 +109,7 @@ void Renderer::drawPostProcess() {
 
 	glActiveTexture(GL_TEXTURE0);
 	glUniform1i(glGetUniformLocation(_processShader->GetProgram(), "sceneTex"), 0);
+	
 	for (int i = 0; i < POST_PASSES; i++) {
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, _bufferColourTex[1], 0);
 		glUniform1i(glGetUniformLocation(_processShader->GetProgram(), "isVertical"), 0);

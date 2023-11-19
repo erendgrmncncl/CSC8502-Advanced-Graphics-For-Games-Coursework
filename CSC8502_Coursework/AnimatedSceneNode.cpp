@@ -20,28 +20,29 @@ AnimatedSceneNode::AnimatedSceneNode(Mesh* animatedMesh, MeshAnimation* animated
 }
 
 void AnimatedSceneNode::setUpShader(OGLRenderer& renderer){
-
+	
+	tempModelMatrix = renderer.getModelMatrix();
 	renderer.BindShader(_shader);
-	Matrix4 modelMatrix = getWorldTransform() * Matrix4::Scale(getModelScale());
+	Matrix4 modelMatrix = _transform * Matrix4::Scale(getModelScale());
+
+	glUniform1i(glGetUniformLocation(_shader->GetProgram(), "diffuseTex"), 0);
 	renderer.setModelMatrix(modelMatrix);
 	renderer.UpdateShaderMatrices();
 
-	glUniform1i(glGetUniformLocation(_shader->GetProgram(), "diffuseTex"), 0);
 	vector<Matrix4> frameMatrices;
 	const Matrix4* invBindPose = _mesh->GetInverseBindPose();
 	const Matrix4* frameData = _meshAnimation->GetJointData(_currentFrame);
-
-	for (unsigned int i = 0; i < _mesh->GetJointCount(); i++) {
+	int jointCount = _mesh->GetJointCount();
+	for (unsigned int i = 0; i < jointCount; i++) {
 		frameMatrices.emplace_back(frameData[i] * invBindPose[i]);
 	}
 
 	int j = glGetUniformLocation(_shader->GetProgram(), "joints");
 	glUniformMatrix4fv(j, frameMatrices.size(), false, (float*)frameMatrices.data());
-
+	renderer.setModelMatrix(tempModelMatrix);
 }
 
 void AnimatedSceneNode::draw(OGLRenderer& renderer, bool isDrawingForShadow){
-	glEnable(GL_CULL_FACE);
 	if (isDrawingForShadow){
 		return;
 	}
@@ -55,7 +56,7 @@ void AnimatedSceneNode::draw(OGLRenderer& renderer, bool isDrawingForShadow){
 		glBindTexture(GL_TEXTURE_2D, _materialTextures[i]);
 		_mesh->DrawSubMesh(i);
 	}
-	glDisable(GL_CULL_FACE);
+	renderer.setModelMatrix(tempModelMatrix);
 }
 
 void AnimatedSceneNode::update(float dt){

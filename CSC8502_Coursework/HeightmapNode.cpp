@@ -65,7 +65,7 @@ void HeightMapNode::draw(OGLRenderer& renderer, bool isDrawingForShadows) {
 		setUpShader(renderer);
 	_mesh->Draw();
 	drawWater(renderer);
-	postDraw();
+	postDraw(renderer);
 }
 
 void HeightMapNode::drawWater(OGLRenderer& renderer) {
@@ -92,12 +92,17 @@ void HeightMapNode::drawWater(OGLRenderer& renderer) {
 
 	renderer.UpdateShaderMatrices();
 	_waterMesh->Draw();
-
+	Matrix4 textureMatrix = renderer.getModelMatrix();
+	textureMatrix.ToIdentity();
+	renderer.setTextureMatrix(textureMatrix);
 }
 
 void HeightMapNode::update(float dt){
 	_waterRotate += dt * 2.f; //2degree a second.
 	_waterCycle += dt * .25f; //10 units a second.
+}
+
+void HeightMapNode::postDraw(OGLRenderer& renderer){
 }
 
 HeightMapNodeParameter::HeightMapNodeParameter(const std::string& heightMapNoisePath, GLuint heighMapTexture, GLuint bumpTexture, GLuint waterTexture, GLuint currentCubeMap, GLuint shadowTexture,  Mesh* waterMesh, Shader* waterShader)

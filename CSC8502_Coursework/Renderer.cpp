@@ -11,6 +11,7 @@
 #include "AnimatedSceneNode.h"
 #include "../nclgl/MeshAnimation.h"
 #include "../nclgl/MeshMaterial.h"
+#include "../nclgl/HeightMap.h"
 
 namespace {
 
@@ -19,10 +20,10 @@ namespace {
 
 	//TODO(eren.degirmenci): add planet data
 	const std::map<std::string, SpaceObjectParams> spaceObjectsDataMap = {
-		{"planet_venus", SpaceObjectParams(Vector3(250, 250, 0),Vector3(15, 15, 15), TEXTUREDIR"venus_surface.tga")},
-		{"planet_mercury", SpaceObjectParams(Vector3(-40000, 500, -3000),Vector3(750, 750, 750), TEXTUREDIR"mercury_surface.jpg")},
-		{"sun", SpaceObjectParams(Vector3(-20000, 0, 0),Vector3(3500, 3500, 3500), TEXTUREDIR"sun_surface.jpg")},
-		{"mars", SpaceObjectParams(Vector3(-10000, 300, 1400),Vector3(1200, 1200, 1200), TEXTUREDIR"mars_surface.jpg")}
+		{"planet_venus", SpaceObjectParams(Vector3(250, 250, 0),Vector3(15, 15, 15), Vector4(1,1,1,1),TEXTUREDIR"venus_surface.tga")},
+		{"planet_mercury", SpaceObjectParams(Vector3(-40000, 500, -3000),Vector3(750, 750, 750),Vector4(1,1,1,1), TEXTUREDIR"mercury_surface.jpg")},
+		{"sun", SpaceObjectParams(Vector3(-20000, 0, 0),Vector3(3500, 3500, 3500), Vector4(1,1,1,.9f), TEXTUREDIR"sun_surface.jpg")},
+		{"mars", SpaceObjectParams(Vector3(-10000, 300, 1400),Vector3(1200, 1200, 1200),Vector4(1,1,1,1), TEXTUREDIR"mars_surface.jpg")}
 	};
 
 	const std::vector<std::string> cubePaths = {
@@ -39,6 +40,9 @@ namespace {
 
 	constexpr const char* SPHERE_MESH_FILE_NAME = "Sphere.msh";
 	constexpr const char* TREE_MESH_FILE_NAME = "Tree.msh";
+	constexpr const char* LANTERN_PLANT_MESH_FILE_NAME = "LanternPlant.msh";
+
+	constexpr const char* LANTERN_PLANT_MATERIAL_FILE_NAME = "LanternPlant.mat";
 
 	constexpr const char* SCENE_SHADER_VERTEX_FILE_NAME = "SceneVertex.glsl";
 	constexpr const char* SCENE_SHADER_FRAGMENT_FILE_NAME = "SceneFragment.glsl";
@@ -50,21 +54,37 @@ namespace {
 	constexpr const char* SKYBOX_SHADER_FRAGMENT_FILE_NAME = "skyboxFragment.glsl";
 
 	constexpr const char* ANIMATED_SHADER_VERTEX_FILE_NAME = "SkinningVertex.glsl";
-	constexpr const char* ANIMATED_SHADER_FRAGMENT_FILE_NAME = "texturedFragment.glsl";
+	constexpr const char* ANIMATED_SHADER_FRAGMENT_FILE_NAME = "TexturedFragment.glsl";
 
 	constexpr const char* POST_PROCESS_SHADER_VERTEX_FILE_NAME = "TexturedVertex.glsl";
 	constexpr const char* POST_PROCESS_SHADER_FRAGMENT_FILE_NAME = "processfrag.glsl";
+
+	constexpr const char* PRESENT_SHADER_VERTEX_FILE_NAME = "TexturedVertex.glsl";
+	constexpr const char* PRESENT_SHADER_FRAGMENT_FILE_NAME = "TexturedFragment.glsl";
+
 }
 
 Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
-	_camera = new Camera(.0f, 90.f, Vector3(812, 341, 2));
+
+	std::vector<Vector3> nodesToFollow;
+	nodesToFollow.push_back(Vector3(-912, 341, 2));
+	nodesToFollow.push_back(Vector3(1012, 341, 2));
+	nodesToFollow.push_back(Vector3(100, 0, 2));
+	nodesToFollow.push_back(Vector3(0, 0, 2000));
+
+	_camera = new Camera(.0f, 90.f, Vector3(812, 341, 2), nodesToFollow);
 	_quad = Mesh::GenerateQuad();
 	_sphere = Mesh::LoadFromMeshFile(SPHERE_MESH_FILE_NAME);
 	_tree = Mesh::LoadFromMeshFile(TREE_MESH_FILE_NAME);
 
+	_lanternPlant = Mesh::LoadFromMeshFile(LANTERN_PLANT_MESH_FILE_NAME);
+	_lanternPlantMeshMaterial = new MeshMaterial("LanternPlant.mat");
+
 	_animatedMesh = Mesh::LoadFromMeshFile("Role_T.msh");
 	_animateMeshAnimation = new MeshAnimation("Role_T.anm");
 	_animatedMeshMaterial = new MeshMaterial("Role_T.mat");
+
+	_heightMap = new HeightMap(TEXTUREDIR"islandNoise.jpg");
 
 	_shader = new Shader(SCENE_SHADER_VERTEX_FILE_NAME, SCENE_SHADER_FRAGMENT_FILE_NAME);
 	_skyboxShader = new Shader(SKYBOX_SHADER_VERTEX_FILE_NAME, SKYBOX_SHADER_FRAGMENT_FILE_NAME);
@@ -75,6 +95,8 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	_perPixelSceneShader = new Shader(SCENE_SHADER_VERTEX_WITH_SHADOWS, SCENE_SHADER_FRAGMENT_WITH_SHADOWS);
 	_animationShader = new Shader(ANIMATED_SHADER_VERTEX_FILE_NAME, ANIMATED_SHADER_FRAGMENT_FILE_NAME);
 	_postProcessShader = new Shader(POST_PROCESS_SHADER_VERTEX_FILE_NAME, POST_PROCESS_SHADER_FRAGMENT_FILE_NAME);
+	_presentShader = new Shader(PRESENT_SHADER_VERTEX_FILE_NAME, PRESENT_SHADER_FRAGMENT_FILE_NAME);
+
 	bool isSkyboxShaderInitSuccessfully = _skyboxShader->LoadSuccess();
 	bool isLightShaderInitSuccessfully = _lightShader->LoadSuccess();
 	bool isSceneShaderIniSuccessfully = _shader->LoadSuccess();
@@ -84,11 +106,11 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	bool isAnimationShaderInitSuccessfully = _animationShader->LoadSuccess();
 	bool isPostProcessShaderInitSuccessfully = _postProcessShader->LoadSuccess();
 
-	if (!isSceneShaderIniSuccessfully || !isSkyboxShaderInitSuccessfully || !isLightShaderInitSuccessfully 
-		|| !isReflectShaderInitSuccessfully || !isShadowSceneShaderInitSuccessfully || !isPerPixelSceneShaderInitSuccessfully 
+	if (!isSceneShaderIniSuccessfully || !isSkyboxShaderInitSuccessfully || !isLightShaderInitSuccessfully
+		|| !isReflectShaderInitSuccessfully || !isShadowSceneShaderInitSuccessfully || !isPerPixelSceneShaderInitSuccessfully
 		|| !isAnimationShaderInitSuccessfully || !isPostProcessShaderInitSuccessfully)
 		return;
-	_treeTexture = SOIL_load_OGL_texture(TEXTUREDIR"tree_diffuse.png",
+	_treeTexture = SOIL_load_OGL_texture(TEXTUREDIR"TreeDiffuse.png",
 		SOIL_LOAD_AUTO,
 		SOIL_CREATE_NEW_ID, 0);
 
@@ -98,6 +120,9 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	_heightMapTexture = SOIL_load_OGL_texture(TEXTUREDIR"Barren Reds.JPG", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
 	_bumpTexture = SOIL_load_OGL_texture(TEXTUREDIR"Barren RedsDOT3.JPG", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
 	_waterTex = SOIL_load_OGL_texture(TEXTUREDIR"water.TGA", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
+	_lowPolyTex = SOIL_load_OGL_texture(TEXTUREDIR"Colors3.png", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
+	_lowPolyBumpTex = SOIL_load_OGL_texture(TEXTUREDIR"Colors3DOT3.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
+	_treeBumpTex = SOIL_load_OGL_texture(TEXTUREDIR"TreeDOT3.png", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
 
 	if (!_bumpTexture || !_heightMapTexture || !_waterTex)
 		return;
@@ -147,6 +172,15 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, GL_TEXTURE_2D, _bufferDepthTex, 0);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, _bufferColourTex[0], 0);
 
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE || !_bufferDepthTex || !_bufferColourTex[0]) return;
+
+	glBindFramebuffer(GL_FRAMEBUFFER, _postProcessFBO);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, _bufferColourTex[1], 0);
+
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) return;
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
 	SetTextureRepeating(_heightMapTexture, true);
 	SetTextureRepeating(_waterTex, true);
 	SetTextureRepeating(_bumpTexture, true);
@@ -155,6 +189,8 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	InitPlanetSceneNodes();
 	_currentSceneRoot = _spaceRoot;
 	_globalRoot->addChild(_currentSceneRoot);
+
+	projMatrix = Matrix4::Perspective(1.0f, 500000.f, (float)width / (float)height, 90.f);
 
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_BLEND);
@@ -178,19 +214,40 @@ void Renderer::UpdateScene(float dt) {
 	if (Window::GetKeyboard()->KeyTriggered(KEYBOARD_G)) {
 		toggleScene();
 	}
+
+	if (Window::GetKeyboard()->KeyTriggered(KEYBOARD_V)) {
+		_isBlurOn = !_isBlurOn;
+	}
+
 	_camera->updateCamera(dt);
+	//_currentLight->setPosition(_camera->getPosition());
 	viewMatrix = _camera->buildViewMatrix();
+	projMatrix = Matrix4::Perspective(1.f, 500000.f, (float)width / (float)height, 90.f);
+	_frameFrustum.fromMatrix(projMatrix * viewMatrix);
+
 	//viewMatrix = Matrix4::BuildViewMatrix(_camera->getPosition(), _camera->getDirection());
+
+	_waterRotate += dt * 2.f; //2degree a second.
+	_waterCycle += dt * .25f; //10 units a second.
 
 	_globalRoot->update(dt);
 }
 
 void Renderer::buildNodeLists(SceneNode* from) {
 	bool checkIsInFrustrum = false;
-	if (!from->getIsFrustrumCheckable() || !checkIsInFrustrum || _frameFrustum.isInsideFrustum(*from)) {
+	if (!from->getIsAnimated() || !checkIsInFrustrum || _frameFrustum.isInsideFrustum(*from)) {
 		Vector3 dir = from->getWorldTransform().GetPositionVector() - _camera->getPosition();
 		from->setCameraDistance(Vector3::Dot(dir, dir));
-		_nodeList.push_back(from);
+		if (from->getIsAnimated()) {
+			_animatedNodeList.push_back(from);
+		}
+		else if (from->getColour().w < 1.f) {
+			_transparentNodeList.push_back(from);
+		}
+		else {
+			_nodeList.push_back(from);
+		}
+
 	}
 
 	for (vector<SceneNode*>::const_iterator i = from->getChildIteratorStart(); i != from->getChildIteratorEnd(); i++) {
@@ -199,16 +256,50 @@ void Renderer::buildNodeLists(SceneNode* from) {
 }
 
 void Renderer::sortNodeLists() {
+	std::sort(_animatedNodeList.rbegin(), _animatedNodeList.rend(), SceneNode::compareByCameraDistance);
 	std::sort(_transparentNodeList.rbegin(), _transparentNodeList.rend(), SceneNode::compareByCameraDistance);
 	std::sort(_nodeList.begin(), _nodeList.end(), SceneNode::compareByCameraDistance);
 }
 
 void Renderer::drawNodes(bool isDrawingForShadows) {
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	for (const auto& i : _animatedNodeList) {
+		if (isDrawingForShadows) {
+			modelMatrix = i->getWorldTransform() * Matrix4::Scale(i->getModelScale());
+			UpdateShaderMatrices();
+		}
+		else
+		{
+			i->setUpShader(*this);
+
+		}
+		drawNode(i, isDrawingForShadows);
+	}
+	if (!isDrawingForShadows)
+	{
+		BindShader(_perPixelSceneShader);
+		SetShaderLight(*_currentLight);
+
+		glUniform1i(glGetUniformLocation(_perPixelSceneShader->GetProgram(), "diffuseTex"), 0);
+
+		glUniform1i(glGetUniformLocation(_perPixelSceneShader->GetProgram(), "bumpTex"), 1);
+
+		glUniform1i(glGetUniformLocation(_perPixelSceneShader->GetProgram(), "shadowTex"), 2);
+
+		glUniform3fv(glGetUniformLocation(_perPixelSceneShader->GetProgram(), "cameraPos"), 1, (float*)&_camera->getPosition());
+	}
+
+
 	for (const auto& i : _nodeList) {
 		if (isDrawingForShadows) {
 			modelMatrix = i->getWorldTransform() * Matrix4::Scale(i->getModelScale());
 			UpdateShaderMatrices();
+		}
+		else
+		{
+			if (i->getMesh())
+			{
+				i->setUpShader(*this);
+			}
 		}
 		drawNode(i, isDrawingForShadows);
 	}
@@ -216,6 +307,10 @@ void Renderer::drawNodes(bool isDrawingForShadows) {
 		if (isDrawingForShadows) {
 			modelMatrix = i->getWorldTransform() * Matrix4::Scale(i->getModelScale());
 			UpdateShaderMatrices();
+		}
+		else
+		{
+			i->setUpShader(*this);
 		}
 		drawNode(i, isDrawingForShadows);
 	}
@@ -230,82 +325,93 @@ void Renderer::drawNode(SceneNode* node, bool isDrawingForShadows) {
 void Renderer::InitGlobalSceneNode() {
 
 	_globalRoot = new SceneNode();
-	InitSkyboxNode();
-	_globalRoot->addChild(_skyboxNode);
+	_globalRoot->setNodeName("global_node");
+	//InitSkyboxNode();
+	//_globalRoot->addChild(_skyboxNode);
 }
 
 void Renderer::InitSpaceSceneNodes() {
 	_spaceRoot = new SceneNode();
+	_spaceRoot->setNodeName("space_root");
 
 	for (auto planetData : spaceObjectsDataMap) {
 		GLuint texture = SOIL_load_OGL_texture(planetData.second._texturePath,
 			SOIL_LOAD_AUTO,
 			SOIL_CREATE_NEW_ID, 0);
-		auto* planet = new SpaceObject(_sphere, texture, _shader, planetData.second);
+		auto* planet = new SpaceObject(_sphere, texture, _perPixelSceneShader, planetData.second);
 		planet->setNodeName(planetData.first);
+		//planet->setBumpTexture(_bumpTexture);
+		planet->setShadowTexture(_shadowTex);
 		_spaceRoot->addChild(planet);
 	}
 }
 
 void Renderer::InitPlanetSceneNodes() {
 	_planetRoot = new SceneNode();
+	_planetRoot->setNodeName("planet_root");
 
-	HeightMapNode* heightMapNode = new HeightMapNode(_shadowSceneShader, _camera,
-		HeightMapNodeParameter(
-			TEXTUREDIR"islandNoise.jpg", _heightMapTexture,
-			_bumpTexture, _waterTex, _planetCubemap, _shadowTex, _quad,
-			_reflectShader));
-	heightMapNode->setBoundingRadius(100.f);
-	heightMapNode->setNodeName("heightmap_node");
-	_heightMapSize = heightMapNode->getHeightMapSize();
-
-	Vector3 lightPos = _heightMapSize * Vector3(1.1f, 1.1f, 1.1f);
+	Vector3 lightPos = _heightMap->getHeightmapSize() * Vector3(1.1f, 1.1f, 1.1f);
 	lightPos.y += 300.f;
-	heightMapNode->setLight(new Light(_heightMapSize * Vector3(0.5f, .2f, 0.f), Vector4(1, 1, 1, 1), 400000));
-	_currentLight = heightMapNode->getLight();
+	_currentLight = new Light(Vector3(10000.f, 12000.f, -18000.f), Vector4(1, 1, 1, 1), 40000);
 
-	for (int i = 0; i < 1; i++) {
-		auto* treeNode = new SceneNode(_sphere);
+	for (int i = 0; i < 70; i++) {
+		auto* treeNode = new SceneNode(_tree);
 		treeNode->setCamera(_camera);
 		treeNode->setLight(_currentLight);
 
-		treeNode->setShader(_shadowSceneShader);
+		treeNode->setShader(_perPixelSceneShader);
 		treeNode->setColour(Vector4(1.0f, 1.0f, 1.0f, 1.0f));
 
-		float modelScale = 10.f * 4;
+		float modelScale = 10.f * 100;
 		treeNode->setModelScale(Vector3(modelScale, modelScale, modelScale));
-		float startPosX = _heightMapSize.x * .25f;
-		float startPosZ = _heightMapSize.z * .25f;
-		int xRange = _heightMapSize.x - startPosX + 1;
-		int zRange = _heightMapSize.x - startPosX + 1;
-		float xPos = (float)(rand() % (int)xRange + startPosX);
-		float zPos = (float)(rand() % (int)zRange + startPosZ);
-		float yPos = _heightMapSize.y;
+		int xRange = 977 + std::rand() % (5484 - 977 + 1);//_heightMap->getHeightmapSize().x - startPosX + 1;
+		int zRange = 1183 + std::rand() % (4965 - 1183 + 1);//_heightMap->getHeightmapSize().x - startPosX + 1;
+		float xPos = (float)(xRange);
+		float zPos = (float)(zRange);
+		float yPos = _heightMap->getHeightmapSize().y + 30.f;
 
 		Vector3 treePos = Vector3(xPos, yPos, zPos);
 
 		treeNode->setTransform(Matrix4::Translation(treePos));
 		treeNode->setTexture(_treeTexture);
 		treeNode->setShadowTexture(_shadowTex);
-		treeNode->setBumpTexture(_bumpTexture);
+		treeNode->setBumpTexture(_treeBumpTex);
 		treeNode->setBoundingRadius(40.f);
-		treeNode->setNodeName("tree_node");
+		treeNode->setNodeName("tree_node_" + i);
 		_planetRoot->addChild(treeNode);
 	}
 
 	auto* animatedNode = new AnimatedSceneNode(_animatedMesh, _animateMeshAnimation, _animatedMeshMaterial);
 	animatedNode->setShader(_animationShader);
+	animatedNode->setIsAnimated(true);
 	animatedNode->setModelScale(Vector3(1.f, 1.f, 1.f));
 	animatedNode->setBoundingRadius(1.f);
 	animatedNode->setNodeName("animated_node");
 	animatedNode->setModelScale(Vector3(100, 100, 100));
-	animatedNode->setTransform(Matrix4::Translation(Vector3(1300, 155, 1300)));
+	animatedNode->setTransform(Matrix4::Translation(Vector3(3115, _heightMap->getHeightmapSize().y, 6060)));
+
+	std::vector<Vector3> nodesToFollow;
+	/*nodesToFollow.push_back(Vector3(3005, _heightMap->getHeightmapSize().y, 100));
+	nodesToFollow.push_back(Vector3(3225, _heightMap->getHeightmapSize().y, 100));
+	animatedNode->initMovement(nodesToFollow, true,50.f);*/
 	_planetRoot->addChild(animatedNode);
 
-	m_planetSceneCameraPos = _heightMapSize * Vector3(.5f, 1.f, .5f);
-	m_planetSceneCameraPos.y += 100.f;
 
-	_planetRoot->addChild(heightMapNode);
+	auto* lanternPlant = new SceneNode(_lanternPlant);
+	lanternPlant->setBumpTexture(_lowPolyBumpTex);
+	lanternPlant->setTexture(_lowPolyTex);
+	lanternPlant->setShadowTexture(_shadowTex);
+	lanternPlant->setShader(_perPixelSceneShader);
+	//lanternPlant->setModelScale(Vector3(1.f, 1.f, 1.f));
+	lanternPlant->setBoundingRadius(5.f);
+	lanternPlant->setModelScale(Vector3(100, 100, 100));
+	lanternPlant->setTransform(Matrix4::Translation(Vector3(2956, 155, 3167)));
+	lanternPlant->setNodeName("lantern_plant_node");
+	_planetRoot->addChild(lanternPlant);
+
+
+	m_planetSceneCameraPos = _heightMap->getHeightmapSize() * Vector3(.5f, 1.f, .5f);
+	m_planetSceneCameraPos.y += 100.f;
 }
 
 void Renderer::InitSkyboxNode() {
@@ -315,33 +421,65 @@ void Renderer::InitSkyboxNode() {
 	_skyboxNode->setNodeName("Space_SkyboxNode");
 	_skyboxNode->setTexture(_cubeMap);
 
-	_skyboxNode->setIsFrustrumCheckable(false);
+	_skyboxNode->setIsAnimated(false);
 }
 
 void Renderer::RenderScene() {
-
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
-	projMatrix = Matrix4::Perspective(1.0f, 50000.f, (float)width / (float)height, 45.0f);
 	buildNodeLists(_globalRoot);
 	sortNodeLists();
-	if (_sceneToggle)
+
+
+	if (_sceneToggle && _isBlurOn)
 	{
-		drawShadowScene();
+		glBindFramebuffer(GL_FRAMEBUFFER, _bufferFBO);
+		glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 	}
-	drawNodes(false);
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	if (_sceneToggle)
+	else
 	{
-		//drawPostProcess();
-		//presentScene();
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	}
 
+
+	drawSkybox();
+
+	if (_sceneToggle) {
+		drawShadowScene();
+		drawWater();
+		drawHeightMap();
+	}
+
+	drawNodes(false);
 	clearNodeLists();
+
+
+	if (_sceneToggle && _isBlurOn)
+	{
+		glBindFramebuffer(GL_FRAMEBUFFER, _postProcessFBO);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, _bufferColourTex[1], 0);
+		modelMatrix.ToIdentity();
+		viewMatrix.ToIdentity();
+		projMatrix.ToIdentity();
+		textureMatrix.ToIdentity();
+
+		glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+		drawPostProcess();
+
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		glEnable(GL_DEPTH_TEST);
+		presentScene();
+
+
+		glViewport(0, 0, width, height);
+	}
+
 }
 
 void Renderer::clearNodeLists() {
 	_transparentNodeList.clear();
 	_nodeList.clear();
+	_animatedNodeList.clear();
 }
 
 void Renderer::toggleScene() {
@@ -358,48 +496,59 @@ void Renderer::toggleScene() {
 void Renderer::onChangeScene() {
 	if (_sceneToggle) {
 		_camera->setPosition(m_planetSceneCameraPos);
-		_skyboxNode->setTexture(_planetCubemap);
+
+		_currentLight->setPosition(Vector3(10000.f, 12000.f, -18000.f));
+		_currentLight->setRadius(40000.f);
 	}
-	else {
-		_skyboxNode->setTexture(_cubeMap);
+	else
+	{
+		_currentLight->setPosition(Vector3(20385, 1331, -215));
+		_currentLight->setRadius(10000000.f);
+
 	}
 }
 
 void Renderer::drawShadowScene() {
 	glBindFramebuffer(GL_FRAMEBUFFER, _shadowFBO);
+
 	glClear(GL_DEPTH_BUFFER_BIT);
+	glEnable(GL_CULL_FACE);
+	glCullFace(GL_FRONT);
 	glViewport(0, 0, SHADOW_SIZE, SHADOW_SIZE);
 	glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
 
-	BindShader(_shadowShader);
 
-	viewMatrix = Matrix4::BuildViewMatrix(_currentLight->getPosition() * Vector3(1.0f, 1.0f, 1.0f), _heightMapSize * Vector3(0.5f, 0.0f, 0.5f));
-	projMatrix = Matrix4::Perspective(1, 100, 1, 45);
+
+	viewMatrix = Matrix4::BuildViewMatrix(_currentLight->getPosition() * Vector3(1.0f, 1.0f, 1.0f), _heightMap->getHeightmapSize() * Vector3(0.5f, 0.5f, 0.5f));
+	projMatrix = Matrix4::Perspective(1000, 500000.f, 1, 90);
 
 	shadowMatrix = projMatrix * viewMatrix;
 
+	BindShader(_shadowShader);
 	drawNodes(true);
 
 	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 	glViewport(0, 0, width, height);
 	viewMatrix = _camera->buildViewMatrix();
-	projMatrix = Matrix4::Perspective(1.0f, 50000.f, (float)width / (float)height, 45.0f);
+	projMatrix = Matrix4::Perspective(1.0f, 500000.f, (float)width / (float)height, 90.f);
+	glDisable(GL_CULL_FACE);
+	if (_isBlurOn)
+	{
+		glBindFramebuffer(GL_FRAMEBUFFER, _bufferFBO);
+	}
+	else
+	{
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	}
+
 }
 
 void Renderer::drawPostProcess() {
-	glBindFramebuffer(GL_FRAMEBUFFER, _postProcessFBO);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, _bufferColourTex[1], 0);
-	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
-
 	BindShader(_postProcessShader);
-
-	modelMatrix.ToIdentity();
-	viewMatrix.ToIdentity();
-	projMatrix.ToIdentity();
 	UpdateShaderMatrices();
 
 	glDisable(GL_DEPTH_TEST);
-
 	glActiveTexture(GL_TEXTURE0);
 	glUniform1i(glGetUniformLocation(_postProcessShader->GetProgram(), "sceneTex"), 0);
 	for (int i = 0; i < POST_PASSES; i++) {
@@ -418,14 +567,76 @@ void Renderer::drawPostProcess() {
 
 void Renderer::presentScene() {
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
-	BindShader(_shadowSceneShader);
-	modelMatrix.ToIdentity();
-	viewMatrix.ToIdentity();
-	projMatrix.ToIdentity();
+	BindShader(_presentShader);
 	UpdateShaderMatrices();
-	glUniform1i(glGetUniformLocation(_shadowSceneShader->GetProgram(), "diffuseTex"), 0);
+	glUniform1i(glGetUniformLocation(_presentShader->GetProgram(), "diffuseTex"), 0);
+
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, _bufferColourTex[0]);
+	glBindTexture(GL_TEXTURE_2D, _bufferColourTex[1]);
+
 	_quad->Draw();
+}
+
+void Renderer::drawHeightMap() {
+	BindShader(_perPixelSceneShader);
+	SetShaderLight(*_currentLight);
+
+	glUniform1i(glGetUniformLocation(_perPixelSceneShader->GetProgram(), "diffuseTex"), 0);
+	glUniform1i(glGetUniformLocation(_perPixelSceneShader->GetProgram(), "bumpTex"), 1);
+	glUniform1i(glGetUniformLocation(_perPixelSceneShader->GetProgram(), "shadowTex"), 2);
+	glUniform3fv(glGetUniformLocation(_perPixelSceneShader->GetProgram(), "cameraPos"), 1, (float*)&_camera->getPosition());
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, _heightMapTexture);
+
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, _bumpTexture);
+
+	glActiveTexture(GL_TEXTURE2);
+	glBindTexture(GL_TEXTURE_2D, _shadowTex);
+
+	modelMatrix.ToIdentity();
+	UpdateShaderMatrices();
+	_heightMap->Draw();
+}
+
+void Renderer::drawWater() {
+	BindShader(_reflectShader);
+
+	glUniform3fv(glGetUniformLocation(_reflectShader->GetProgram(), "cameraPos"), 1, (float*)&_camera->getPosition());
+
+	glUniform1i(glGetUniformLocation(_reflectShader->GetProgram(), "diffuseTex"), 0);
+	glUniform1i(glGetUniformLocation(_reflectShader->GetProgram(), "cubeTex"), 1);
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, _waterTex);
+
+	glActiveTexture(GL_TEXTURE2);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, _planetCubemap);
+
+	Vector3 hSize = _heightMap->getHeightmapSize();
+
+	modelMatrix = Matrix4::Translation(hSize * 0.5f - Vector3(0, 35.0f, 0)) * Matrix4::Scale(hSize) * Matrix4::Rotation(90, Vector3(1, 0, 0));
+
+	textureMatrix = Matrix4::Translation(Vector3(_waterCycle, 0.0f, _waterCycle)) *
+		Matrix4::Scale(Vector3(10, 10, 10)) * Matrix4::Rotation(_waterRotate, Vector3(0, 0, 1));
+
+	UpdateShaderMatrices();
+	_quad->Draw();
+	textureMatrix.ToIdentity();
+}
+
+void Renderer::drawSkybox() {
+
+	glDepthMask(GL_FALSE);
+	BindShader(_skyboxShader);
+	glUniform1i(glGetUniformLocation(_skyboxShader->GetProgram(), "cubeTex"), 1);
+	glActiveTexture(GL_TEXTURE1);
+	if (_sceneToggle)
+		glBindTexture(GL_TEXTURE_CUBE_MAP, _planetCubemap);
+	else
+		glBindTexture(GL_TEXTURE_CUBE_MAP, _cubeMap);
+	UpdateShaderMatrices();
+	_quad->Draw();
+	glDepthMask(GL_TRUE);
 }

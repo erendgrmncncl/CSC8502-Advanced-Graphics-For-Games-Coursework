@@ -72,7 +72,7 @@ void SceneNode::update(float dt){
     }
 }
 
-void SceneNode::draw(const OGLRenderer& renderer){
+void SceneNode::draw(const OGLRenderer& renderer, bool isDrawingForShadows = false){
     if (_mesh)
         _mesh->Draw();
 }

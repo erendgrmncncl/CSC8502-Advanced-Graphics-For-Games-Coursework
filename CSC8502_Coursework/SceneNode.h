@@ -10,6 +10,7 @@
 
 class OGLRenderer;
 class Camera;
+class MeshMaterial;
 
 class SceneNode {
 public:
@@ -42,11 +43,14 @@ public:
 	std::string& getNodeName();
 	void setNodeName(const std::string& nodeName);
 
-	bool getIsFrustrumCheckable() const;
-	void setIsFrustrumCheckable(bool isFrustrumCheckable);
+	bool getIsAnimated() const;
+	void setIsAnimated(bool isFrustrumCheckable);
 
 	GLuint getTexture() const;
 	void setTexture(GLuint texture);
+
+	MeshMaterial* getMeshMaterial();
+	void setMeshMaterial(MeshMaterial* meshMaterial);
 
 	GLuint getShadowTexture() const;
 	void setShadowTexture(GLuint shadowTexture);
@@ -67,20 +71,30 @@ public:
 	
 	virtual void update(float dt);
 	virtual void draw(OGLRenderer& renderer, bool isDrawingForShadows = false);
+	void initMovement(std::vector<Vector3> nodesToVisit, bool isLoopable, float speed = 10.f);
 
 	std::vector<SceneNode*>::const_iterator getChildIteratorStart();
 	std::vector<SceneNode*>::const_iterator getChildIteratorEnd();
 
+	virtual void setUpShader(OGLRenderer& renderer);
+
 protected:
-	bool _isFrustrumCheckable = true;
-	bool _testMove = false;
+	bool _isAnimatedNode = false;
+	
+	bool _isMoveable = false;
+	bool _isLoopingBetweenNodes = false;
+
+	int _currentNodeIndex = 0;
 
 	float _boundingRadius;
 	float _distanceFromCamera;
+	float _speed = 0.f;
 
 	GLuint _texture;
 	GLuint _shadowTexture;
-	GLuint _bumpTexture;
+	GLuint _bumpTexture = 0;
+
+	MeshMaterial* _meshMaterial;
 
 	SceneNode* _parent = nullptr;
 	Mesh* _mesh = nullptr;
@@ -96,7 +110,13 @@ protected:
 	std::string _nodeName;
 
 	std::vector<SceneNode*> _children;
+	vector<GLuint> _materialTextures;
 
-	virtual void setUpShader(OGLRenderer& renderer);
-	virtual void postDraw();
+	Vector3 _currentNodeToVisit;
+	std::vector<Vector3> _nodesToVisit;
+	std::vector<Vector3> _completedNodes;
+
+	virtual void postDraw(OGLRenderer& renderer);
+	virtual void handleMovement(float dt);
+	virtual void moveTowards(float currentSpeed, Vector3 target, Vector3 currentPosition);
 };

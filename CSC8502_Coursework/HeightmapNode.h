@@ -55,4 +55,5 @@ protected:
 	void draw(OGLRenderer& renderer, bool isDrawingForShadows = false) override;
 	void drawWater(OGLRenderer& renderer);
 	void update(float dt) override;
+	void postDraw(OGLRenderer& renderer) override;
 };

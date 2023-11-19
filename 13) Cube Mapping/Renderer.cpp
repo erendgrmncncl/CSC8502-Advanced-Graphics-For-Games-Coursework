@@ -98,6 +98,8 @@ void Renderer::drawHeightMap() {
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, _earthBump);
 
+	glUniform3fv(glGetUniformLocation(_lightShader->GetProgram(), "cameraPos"), 1, (float*)&_camera->getPosition());
+
 	modelMatrix.ToIdentity(); //New !
 	textureMatrix.ToIdentity(); //New
 

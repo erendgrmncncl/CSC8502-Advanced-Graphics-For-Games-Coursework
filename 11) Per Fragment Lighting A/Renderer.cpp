@@ -17,11 +17,8 @@ Renderer::Renderer(Window& window) : OGLRenderer(window) {
 	Vector3 heightMapSize = _heightMap->getHeightmapSize();
 	_camera = new Camera(-45.f, 0.f, heightMapSize * Vector3(.5f, 5.f, 0.5f));
 
-	for (int i = 0; i < 4; i++){
-		auto* light = new Light(heightMapSize * Vector3(.5f + ((i+1) * 5) , 1.5f, .5f), Vector4( .2f * (i+1), 1, 1, 1), heightMapSize.x * .5f, Vector4(0, 1, 0, 1.f));
-		_lights.push_back(light);
-	}
-
+	auto* light = new Light(heightMapSize * Vector3(.5f, 1.5f, 0.5f), Vector4(1, 1, 1, 1), heightMapSize.x * .5f);
+	_lights.push_back(light);
 	projMatrix = Matrix4::Perspective(1.f, 15000.f, (float)width / (float)height, 45.f);
 
 	glEnable(GL_DEPTH_TEST);

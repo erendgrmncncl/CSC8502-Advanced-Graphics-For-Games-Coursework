@@ -11,6 +11,7 @@ class SkyboxNode;
 class Light;
 class MeshAnimation;
 class MeshMaterial;
+class HeightMap;
 
 class Renderer : public OGLRenderer {
 public:
@@ -22,6 +23,10 @@ public:
 
 protected:
 	bool _sceneToggle = false;
+	bool _isBlurOn = false;
+
+	float _waterCycle = 0.0f;
+	float _waterRotate = 0.0f;
 
 	Vector3 m_planetSceneCameraPos;
 	SceneNode* _globalRoot;
@@ -38,8 +43,10 @@ protected:
 	Mesh* _sphere;
 	Mesh* _tree;
 	Mesh* _animatedMesh;
+	Mesh* _lanternPlant;
 	MeshAnimation* _animateMeshAnimation;
 	MeshMaterial* _animatedMeshMaterial;
+	MeshMaterial* _lanternPlantMeshMaterial;
 
 	GLuint _heightMapTexture;
 	GLuint _bumpTexture;
@@ -48,6 +55,9 @@ protected:
 	GLuint _treeTexture;
 	GLuint _shadowTex;
 	GLuint _waterTex;
+	GLuint _lowPolyTex;
+	GLuint _lowPolyBumpTex;
+	GLuint _treeBumpTex;
 
 	GLuint _shadowFBO;
 	GLuint _postProcessFBO;
@@ -57,6 +67,7 @@ protected:
 	GLuint _bufferDepthTex;
 
 	Shader* _shader;
+	Shader* _presentShader;
 	Shader* _perPixelSceneShader;
 	Shader* _shadowSceneShader;
 	Shader* _skyboxShader;
@@ -68,9 +79,10 @@ protected:
 
 	Frustum _frameFrustum;
 
-	Vector3 _heightMapSize;
+	HeightMap* _heightMap;
 	
 	std::vector<SceneNode*> _transparentNodeList;
+	std::vector<SceneNode*> _animatedNodeList;
 	std::vector<SceneNode*> _nodeList;
 	
 	void buildNodeLists(SceneNode* nodeToBuild);
@@ -87,4 +99,7 @@ protected:
 	void drawShadowScene();
 	void drawPostProcess();
 	void presentScene();
+	void drawHeightMap();
+	void drawSkybox();
+	void drawWater();
 };

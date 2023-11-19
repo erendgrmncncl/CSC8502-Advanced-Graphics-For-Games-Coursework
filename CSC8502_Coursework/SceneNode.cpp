@@ -1,5 +1,10 @@
 #include "SceneNode.h"
 #include "../nclgl/Camera.h"
+#include "../nclgl/MeshMaterial.h"
+
+namespace {
+	constexpr const float NODE_REACH_THRESHOLD = 5.f;
+}
 
 SceneNode::SceneNode(Mesh* mesh, Vector4 colour) {
 	_mesh = mesh;
@@ -95,12 +100,12 @@ void SceneNode::setNodeName(const std::string& nodeName) {
 	_nodeName = nodeName;
 }
 
-bool SceneNode::getIsFrustrumCheckable() const {
-	return _isFrustrumCheckable;
+bool SceneNode::getIsAnimated() const {
+	return _isAnimatedNode;
 }
 
-void SceneNode::setIsFrustrumCheckable(bool isFrustrumCheckable) {
-	_isFrustrumCheckable = isFrustrumCheckable;
+void SceneNode::setIsAnimated(bool isFrustrumCheckable) {
+	_isAnimatedNode = isFrustrumCheckable;
 }
 
 GLuint SceneNode::getTexture() const {
@@ -111,26 +116,44 @@ void SceneNode::setTexture(GLuint texture) {
 	_texture = texture;
 }
 
-GLuint SceneNode::getShadowTexture() const{
+MeshMaterial* SceneNode::getMeshMaterial()
+{
+	return _meshMaterial;
+}
+
+void SceneNode::setMeshMaterial(MeshMaterial* meshMaterial){
+	_meshMaterial = meshMaterial;
+	for (int i = 0; i < _mesh->GetSubMeshCount(); ++i) {
+		const MeshMaterialEntry* matEntry = _meshMaterial->GetMaterialForLayer(i);
+
+		const string* fileName = nullptr;
+		matEntry->GetEntry("Diffuse", &fileName);
+		string path = TEXTUREDIR + *fileName;
+		GLuint texID = SOIL_load_OGL_texture(path.c_str(), SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS | SOIL_FLAG_INVERT_Y);
+		_materialTextures.emplace_back(texID);
+	}
+}
+
+GLuint SceneNode::getShadowTexture() const {
 	return _shadowTexture;
 }
 
-void SceneNode::setShadowTexture(GLuint shadowTexture){
+void SceneNode::setShadowTexture(GLuint shadowTexture) {
 	_shadowTexture = shadowTexture;
 }
 
-GLuint SceneNode::getBumpTexture() const{
+GLuint SceneNode::getBumpTexture() const {
 	return _bumpTexture;
 }
 
-void SceneNode::setBumpTexture(GLuint bumpTexture){
+void SceneNode::setBumpTexture(GLuint bumpTexture) {
 	_bumpTexture = bumpTexture;
 }
 
 bool SceneNode::compareByCameraDistance(SceneNode* firstNode, SceneNode* secondNode) {
-	if (!firstNode->getIsFrustrumCheckable())
+	if (firstNode->getIsAnimated())
 		return true;
-	else if (!secondNode->getIsFrustrumCheckable())
+	else if (secondNode->getIsAnimated())
 		return false;
 	return firstNode->_distanceFromCamera < secondNode->_distanceFromCamera ? true : false;
 }
@@ -169,6 +192,11 @@ void SceneNode::update(float dt) {
 		_worldTransform = _parent->_worldTransform * _transform;
 	else
 		_worldTransform = _transform;
+
+	if (_isMoveable && _nodesToVisit.size() != 0){
+		handleMovement(dt);
+	}
+
 	for (vector<SceneNode*>::iterator i = _children.begin(); i != _children.end(); ++i) {
 		(*i)->update(dt);
 	}
@@ -183,10 +211,30 @@ void SceneNode::draw(OGLRenderer& renderer, bool isDrawingForShadows) {
 	if (_shader) {
 		setUpShader(renderer);
 	}
-	if (_mesh)
-		_mesh->Draw();
+	if (_materialTextures.size() != 0 && _mesh)
+	{
+		for (int i = 0; i < _mesh->GetSubMeshCount(); i++) {
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, _materialTextures[i]);
+			_mesh->DrawSubMesh(i);
+		}
+	}
+	else
+	{
+		if (_mesh)
+			_mesh->Draw();
+	}
 
-	postDraw();
+
+	postDraw(renderer);
+}
+
+void SceneNode::initMovement(std::vector<Vector3> nodesToVisit, bool isLoopable, float speed)
+{
+	_isMoveable = true;
+	_isLoopingBetweenNodes = isLoopable;
+	_nodesToVisit = nodesToVisit;
+	_speed = speed;
 }
 
 std::vector<SceneNode*>::const_iterator SceneNode::getChildIteratorStart()
@@ -200,56 +248,67 @@ std::vector<SceneNode*>::const_iterator SceneNode::getChildIteratorEnd()
 }
 
 void SceneNode::setUpShader(OGLRenderer& renderer) {
-	if (_camera != nullptr && _light != nullptr) {
-		renderer.BindShader(_shader);
-		renderer.SetShaderLight(*_light);
 
-		glUniform1i(glGetUniformLocation(_shader->GetProgram(), "diffuseTex"), 0);
+	Matrix4 model = getWorldTransform() * Matrix4::Scale(getModelScale());
 
-		glUniform1i(glGetUniformLocation(_shader->GetProgram(), "bumpTex"), 1);
+	glUniformMatrix4fv(glGetUniformLocation(_shader->GetProgram(), "modelMatrix"), 1, false, model.values);
 
-		glUniform1i(glGetUniformLocation(_shader->GetProgram(), "shadowTex"), 2);
+	glUniform4fv(glGetUniformLocation(_shader->GetProgram(), "nodeColour"), 1, (float*)&getColour());
 
-		glUniform3fv(glGetUniformLocation(_shader->GetProgram(), "cameraPos"), 1, (float*)&_camera->getPosition());
-
-		if (_mesh) {
-			Matrix4 model = getWorldTransform() * Matrix4::Scale(getModelScale());
-
-			glUniformMatrix4fv(glGetUniformLocation(_shader->GetProgram(), "modelMatrix"), 1, false, model.values);
-
-			glUniform4fv(glGetUniformLocation(_shader->GetProgram(), "nodeColour"), 1, (float*)&getColour());
-			
-			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, _texture);
-
-			glActiveTexture(GL_TEXTURE1);
-			glBindTexture(GL_TEXTURE_2D, _bumpTexture);
-
-			glActiveTexture(GL_TEXTURE2);
- 			glBindTexture(GL_TEXTURE_2D, _shadowTexture);
-			renderer.setModelMatrix(model);
-			renderer.UpdateShaderMatrices();
-		}
-	}
-	else {
-		renderer.BindShader(_shader);
-		renderer.UpdateShaderMatrices();
-		Matrix4 model = getWorldTransform() * Matrix4::Scale(getModelScale());
-
-		glUniformMatrix4fv(glGetUniformLocation(_shader->GetProgram(), "modelMatrix"), 1, false, model.values);
-		glUniform4fv(glGetUniformLocation(_shader->GetProgram(), "nodeColour"), 1, (float*)&getColour());
-
-		_texture = getTexture();
+	if (_texture)
+	{
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, _texture);
-
-		glUniform1i(glGetUniformLocation(_shader->GetProgram(), "useTexture"), _texture);
-
-		glUniform1i(glGetUniformLocation(_shader->GetProgram(), "diffuseTex"), 0);
 	}
+
+	if (!_bumpTexture)
+	{
+
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, _bumpTexture);
+	}
+
+	glActiveTexture(GL_TEXTURE2);
+	glBindTexture(GL_TEXTURE_2D, _shadowTexture);
+
+	renderer.setModelMatrix(model);
+	renderer.UpdateShaderMatrices();
 
 }
 
-void SceneNode::postDraw()
+void SceneNode::postDraw(OGLRenderer& renderer)
 {
+}
+
+void SceneNode::handleMovement(float dt){
+ 	float currentSpeed = _speed * dt;
+	Vector3 currentPosition = _transform.GetPositionVector();
+	float distanceToNode = (_currentNodeToVisit - currentPosition).Length();
+	bool isArrivedToNextNode = distanceToNode < NODE_REACH_THRESHOLD;
+	if (isArrivedToNextNode) {
+		_completedNodes.push_back(_currentNodeToVisit);
+		_currentNodeIndex++;
+
+		if (_nodesToVisit.size() == _currentNodeIndex) {
+			if (!_isLoopingBetweenNodes){
+				_isMoveable = false;
+				return;
+			}
+			_nodesToVisit = _completedNodes;
+			_completedNodes.clear();
+			_currentNodeIndex = 0;
+		}
+
+		_currentNodeToVisit = _nodesToVisit[_currentNodeIndex];
+	}
+
+	Vector3 direction = (_currentNodeToVisit - currentPosition).Normalised();
+	moveTowards(currentSpeed, direction, currentPosition);
+}
+
+void SceneNode::moveTowards(float currentSpeed, Vector3 direction, Vector3 currentPosition){
+	//lookAt(direction);
+
+	currentPosition += direction * currentSpeed;
+	setTransform(Matrix4::Translation(currentPosition));
 }

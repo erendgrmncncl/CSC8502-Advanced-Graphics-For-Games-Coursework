@@ -14,6 +14,7 @@ protected:
 	float _currentFrameTime = 0.f;
 	MeshAnimation* _meshAnimation;
 	MeshMaterial* _meshMaterial;
+	Matrix4 tempModelMatrix;
 
 	vector<GLuint> _materialTextures;
 

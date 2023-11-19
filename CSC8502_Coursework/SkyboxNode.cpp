@@ -11,7 +11,7 @@ void SkyboxNode::setUpShader(OGLRenderer& renderer)
 	renderer.UpdateShaderMatrices();
 }
 
-void SkyboxNode::postDraw(){
+void SkyboxNode::postDraw(OGLRenderer& renderer){
 	glDepthMask(GL_TRUE);
 }
 
@@ -27,5 +27,5 @@ void SkyboxNode::draw(OGLRenderer& renderer, bool isDrawingForShadows)
 	if (_mesh)
 		_mesh->Draw();
 
-	postDraw();
+	postDraw(renderer);
 }
